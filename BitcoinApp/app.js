@@ -17,11 +17,9 @@ if (process.env.HEROKU_PORT) {
 }
 
 serv.listen(port);
-
 console.log("Server has started...");
 
 var totalInvested = 0;
-
 var buyData = JSON.parse(fs.readFileSync("data.json"));
 
 for (var i in buyData["buys"]) {
@@ -37,7 +35,7 @@ io.sockets.on('connection', function (socket) {
     const ws = new WebSocket('wss://ws-feed.pro.coinbase.com')
 
     ws.on('open', function open() {
-        ws.send('{    "type": "subscribe",    "product_ids": [        "BTC-GBP", "ETH-GBP"    ],    "channels": [        "level2",        "heartbeat",        {            "name": "ticker",            "product_ids": [                "BTC-GBP", "ETH-GBP"            ]        }    ]}');
+        ws.send('{"type": "subscribe", "product_ids": ["BTC-GBP", "ETH-GBP"], "channels": ["level2", "heartbeat", {"name": "ticker", "product_ids": ["BTC-GBP", "ETH-GBP"]}]}');
     });
 
     ws.on('message', function incoming(data) {
@@ -49,45 +47,9 @@ io.sockets.on('connection', function (socket) {
                 lastETHPrice = data.changes[0][1]
             }
         } catch (err) {
-
+            // Just ignore error, only happens when the coinbase socket doesn't return any data. 
         }
     });
-
-    sendInitGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS') // 1 Hour chart
-    sendInitGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS') // 3 Hour chart
-    sendInitGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS') // 24 Hour chart
-    sendInitGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD') // 7 Day chart
-    sendInitGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD') // 1 Month chart
-    sendInitGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD') // 6 Month chart
-
-    function sendInitGraphData(fromDate, ToDate, graph, dateFormat) {
-        var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
-
-        if (granularity >= 86400) { granularity = 86400 }
-        else if (granularity >= 21600) { granularity = 21600 }
-        else if (granularity >= 3600) { granularity = 3600 }
-        else if (granularity >= 900) { granularity = 900 }
-        else if (granularity >= 300) { granularity = 300 }
-        else if (granularity >= 60) { granularity = 60 }
-
-        var URL = `https://api.pro.coinbase.com/products/BTC-GBP/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
-        request({ url: URL, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
-
-                var formattedDataArray = []
-
-                for (i = 0; i < body.length; i++) {
-                    var unixTime = body[i][0]
-                    var date = new Date(unixTime * 1000);
-                    formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
-                }
-                socket.emit('graphData', {
-                    graph: graph,
-                    data: formattedDataArray
-                })
-            }
-        });
-    }
 })
 
 setInterval(function () {
@@ -139,9 +101,7 @@ function update() {
 
 function getDate(periodInMonths, periodInDays, periodInHours) {
     const date = new Date()
-
     date.setHours(date.getHours() - 1)
-
     if (periodInMonths != 0) { date.setMonth(date.getMonth() - periodInMonths) }
     if (periodInDays != 0) { date.setDate(date.getDate() - periodInDays) }
     if (periodInHours != 0) { date.setHours(date.getHours() - periodInHours) }
