@@ -10,7 +10,7 @@ app.get("/", function (req, res) {
     res.sendFile(__dirname + '/index.html');
 })
 
-serv.listen(2000);
+serv.listen(process.env.PORT);
 
 console.log("Server has started...");
 
