@@ -5,6 +5,7 @@ const serv = require('http').Server(app);
 const io = require('socket.io')(serv);
 const fs = require('fs');
 const request = require('request');
+const WebSocket = require('ws')
 
 app.get("/", function (req, res) {
     res.sendFile(__dirname + '/index.html');
@@ -33,36 +34,31 @@ var lastETHPrice = 0;
 io.sockets.on('connection', function (socket) {
 
     socket.join('clients')
+    const ws = new WebSocket('wss://ws-feed.pro.coinbase.com')
 
-    const { BitstampStream, CURRENCY } = require("node-bitstamp");
-    const bitstampStream = new BitstampStream();
-
-    bitstampStream.on("connected", () => {
-        const btcEurOrderBookChannel = bitstampStream.subscribe(bitstampStream.CHANNEL_ORDER_BOOK, CURRENCY.BTC_GBP);
-
-        bitstampStream.on(btcEurOrderBookChannel, ({ data, event }) => {
-            if (lastBTCPrice !== data.asks[0][0]) {
-                lastBTCPrice = data.asks[0][0];
-                update();
-            }
-        });
-
-        const ethGbpOrderBookChannel = bitstampStream.subscribe(bitstampStream.CHANNEL_ORDER_BOOK, CURRENCY.ETH_GBP);
-
-        bitstampStream.on(ethGbpOrderBookChannel, ({ data, event }) => {
-            if (lastETHPrice !== data.asks[0][0]) {
-                lastETHPrice = data.asks[0][0];
-                update();
-            }
-        });
+    ws.on('open', function open() {
+        ws.send('{    "type": "subscribe",    "product_ids": [        "BTC-GBP", "ETH-GBP"    ],    "channels": [        "level2",        "heartbeat",        {            "name": "ticker",            "product_ids": [                "BTC-GBP", "ETH-GBP"            ]        }    ]}');
     });
 
-    sendInitGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS')
-    sendInitGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS')
-    sendInitGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS')
-    sendInitGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD')
-    sendInitGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD')
-    sendInitGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD')
+    ws.on('message', function incoming(data) {
+        try {
+            var data = JSON.parse(data)
+            if (data.product_id == "BTC-GBP") {
+                lastBTCPrice = data.changes[0][1]
+            } else if (data.product_id == "ETH-GBP") {
+                lastETHPrice = data.changes[0][1]
+            }
+        } catch (err) {
+
+        }
+    });
+
+    sendInitGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS') // 1 Hour chart
+    sendInitGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS') // 3 Hour chart
+    sendInitGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS') // 24 Hour chart
+    sendInitGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD') // 7 Day chart
+    sendInitGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD') // 1 Month chart
+    sendInitGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD') // 6 Month chart
 
     function sendInitGraphData(fromDate, ToDate, graph, dateFormat) {
         var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
@@ -92,18 +88,17 @@ io.sockets.on('connection', function (socket) {
             }
         });
     }
-
-    bitstampStream.on("error", (e) => console.error(e));
 })
 
 setInterval(function () {
+    update()
     sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS')
     sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS')
     sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS')
     sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD')
     sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD')
     sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD')
-}, 5000);
+}, 1000);
 
 function sendGraphData(fromDate, ToDate, graph, dateFormat) {
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));

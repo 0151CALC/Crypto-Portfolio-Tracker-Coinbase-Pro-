@@ -11,15 +11,15 @@
     "test": "node app.js"
   },
   "dependencies": {
-    "ejs": "^3.1.5",
-    "express": "^4.15.2",
-    "socket.io": "1.4.5",
-    "node-bitstamp": "3.1.0",
-    "request": "2.88.2"
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "request": "^2.88.2",
+    "socket.io": "^1.4.5",
+    "ws": "^8.0.0"
   },
   "devDependencies": {
-    "got": "^11.3.0",
-    "tape": "^4.7.0"
+    "got": "^11.8.2",
+    "tape": "^4.14.0"
   },
   "repository": {
     "type": "git",
