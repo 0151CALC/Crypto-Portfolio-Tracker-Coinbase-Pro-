@@ -1,0 +1,80 @@
+{
+  "buys": [
+    {
+      "date": "2021-02-08",
+      "amountInGBP": 201.999689532363
+    },
+    {
+      "date": "2021-02-22",
+      "amountInGBP": 145.164867795414
+    },
+    {
+      "date": "2021-03-06",
+      "amountInGBP": 104.8299835869
+    },
+    {
+      "date": "2021-03-11",
+      "amountInGBP": 81.4742646
+    },
+    {
+      "date": "2021-03-16",
+      "amountInGBP": 101.53113
+    },
+    {
+      "date": "2021-03-25",
+      "amountInGBP": 100
+    },
+    {
+      "date": "2021-04-01",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-04-14",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-04-26",
+      "amountInGBP": 149.9999886
+    },
+    {
+      "date": "2021-04-28",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-04-28",
+      "amountInGBP": 78.46644231
+    },
+    {
+      "date": "2021-05-01",
+      "amountInGBP": 101.533683906
+    },
+    {
+      "date": "2021-05-06",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-05-13",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-05-26",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-06-14",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-06-26",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-07-14",
+      "amountInGBP": 200
+    },
+    {
+      "date": "2021-07-28",
+      "amountInGBP": 200
+    }
+  ]
+}

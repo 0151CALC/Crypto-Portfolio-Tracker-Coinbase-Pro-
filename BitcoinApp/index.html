@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+
+        <title>My Bitcoin Data</title>
+
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+        <style>
+
+            /*#priceDiv {
+                width: 100%;
+                height: 200px;
+                float: left;
+                background-color: black;
+            }
+
+            #ammountDiv {
+                width: 100%;
+                height: 200px;
+                float: left;
+                background-color: black;
+            }
+
+            #price, #ammount {
+
+                text-align: center;
+                height: 100%;
+                line-height: 200px;
+
+            }
+
+            #price {
+                color: green;
+            }
+
+            #ammount {
+                color: red;
+            }*/
+
+            .content {
+                position: relative;
+                width: 100%;
+                height: 400px;
+            }
+
+            .container {
+                width: 50%;
+                float: left;
+                height: 100%;
+                background-color: black;
+            }
+
+            .split {
+                width: 100%;
+                height: 50%;
+                float: left;
+                text-align: center;
+                line-height: 200px;
+                color: white;
+                font-size: 40px;
+            }
+
+            #total {
+                color: white;
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 100%;
+                text-align: center;
+                font-size: 40px;
+            }
+
+            .mainGraphsContainer {
+                width: 100%;
+                height: 800px;
+            }
+
+            .graphContainer {
+                width: 33.3333333%;
+                height: 400px;
+                float: left;
+                background-color: red;
+            }
+
+            td {
+                background-color: black;
+            }
+
+            th {
+                background-color: rgb(54, 54, 54);
+                color: white;
+            }
+
+            .borderless td, .borderless th {
+                border: none;
+            }
+
+            .table {
+                margin: 0;
+            }
+
+            
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+
+        <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+        <div class="content">
+            <div ID="total"></div>
+
+            <div class="container">
+                <div class="split" ID="BTCPrice"></div>
+                <div class="split" ID="BTCAmount"></div>
+            </div>
+
+            <div class="container">
+                <div class="split" ID="ETHPrice"></div>
+                <div class="split" ID="ETHAmount"></div>
+            </div>
+        </div>
+
+        <div class="mainGraphsContainer">
+
+            <div class="graphContainer" ID="graph1"></div>
+            <div class="graphContainer" ID="graph2"></div>
+            <div class="graphContainer" ID="graph3"></div>
+            <div class="graphContainer" ID="graph4"></div>
+            <div class="graphContainer" ID="graph5"></div>
+            <div class="graphContainer" ID="graph6"></div>
+
+
+        </div>
+
+        <script>
+
+            google.charts.load('current', { 'packages': ['corechart'] });
+
+            var graphData = {
+                graph1: null,
+                graph2: null,
+                graph3: null,
+                graph4: null,
+                graph5: null,
+                graph6: null,
+            }
+
+            function drawChart(graphData, graph) {
+                var data = google.visualization.arrayToDataTable(graphData, true);
+
+                var options = {
+                    legend: 'none',
+                    bar: { groupWidth: '100%' },
+                    candlestick: {
+                        fallingColor: { strokeWidth: 0, fill: '#a52714' },
+                        risingColor: { strokeWidth: 0, fill: '#0f9d58' }
+                    },
+                    chartArea: {
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 50
+                    },
+                    hAxis: {
+                        gridlines: {
+                            color: '#FFFFFF'
+                        },
+                        textStyle: {
+                            color: 'white'
+                        }
+                    },
+                    vAxis: {
+                        gridlines: {
+                            color: '#FFFFFF'
+                        },
+                        textStyle: {
+                            color: 'white'
+                        },
+                        textPosition: 'in'
+
+                    },
+                    backgroundColor: '#000000'
+                };
+
+                var chart = new google.visualization.CandlestickChart(document.getElementById(graph));
+
+                chart.draw(data, options);
+            }
+
+            const TABLELENGTH = 10;
+            const BTCAmount = 0.09466292;
+            const ETHAmount = 0.21758439;
+
+            var socket = io();
+            var BTCPrice = 0;
+            var ETHPrice = 0;
+            var prices = [];
+
+            for (i = 0; i < TABLELENGTH; i++) {
+                prices.push({
+                    gain: true,
+                    time: null,
+                    price: null,
+                    amount: null
+                })
+            }
+
+            socket.on('graphData', function (data) {
+
+                graphData[data.graph] = data.data
+                google.charts.setOnLoadCallback(drawChart(graphData[data.graph], data.graph));
+            })
+
+            socket.on('data', function (data) {
+
+                if (BTCPrice < data.BTCPrice) {
+                    document.getElementById("BTCPrice").style.color = "green";
+                } else {
+                    document.getElementById("BTCPrice").style.color = "Red";
+                }
+
+                if (ETHPrice < data.ETHPrice) {
+                    document.getElementById("ETHPrice").style.color = "green";
+                } else {
+                    document.getElementById("ETHPrice").style.color = "Red";
+                }
+
+                var total = ((BTCPrice * BTCAmount) + (ETHPrice * ETHAmount)).toFixed(2);
+
+                BTCPrice = data.BTCPrice;
+                ETHPrice = data.ETHPrice;
+
+                document.getElementById("BTCPrice").innerHTML = BTCPrice
+                document.getElementById("BTCAmount").innerHTML = (BTCPrice * BTCAmount).toFixed(2)
+
+                document.getElementById("ETHPrice").innerHTML = ETHPrice
+                document.getElementById("ETHAmount").innerHTML = (ETHPrice * ETHAmount).toFixed(2)
+
+                document.getElementById("total").innerHTML = total + "<br>" + (total - data.totalInvested).toFixed(2)
+
+                if ((total - data.totalInvested) > 0) {
+                    document.getElementById("total").style.color = "green";
+                } else {
+                    document.getElementById("total").style.color = "red";
+                }
+            })
+        </script>
+
+    </body>
+</html>
