@@ -180,7 +180,7 @@
                 document.getElementById("ETHAmount").innerHTML = (ETHPrice * ETHAmount).toFixed(2)
 
                 document.getElementById("total").innerHTML = total + "<br>" + (total - data.totalInvested).toFixed(2)
-                document.getElementById("total").style.color = getColour((total - data.totalInvested), 0)
+                document.getElementById("total").style.color = getColour(0, (total - data.totalInvested))
 
                 function getColour(var1, var2) {
                     if (var1 < var2) {
