@@ -29,27 +29,27 @@ for (var i in buyData["buys"]) {
 var lastBTCPrice = 0;
 var lastETHPrice = 0;
 
-io.sockets.on('connection', function (socket) {
+const ws = new WebSocket('wss://ws-feed.pro.coinbase.com')
 
-    socket.join('clients')
-    const ws = new WebSocket('wss://ws-feed.pro.coinbase.com')
+ws.on('open', function open() {
+    ws.send('{"type": "subscribe", "product_ids": ["BTC-GBP", "ETH-GBP"], "channels": ["level2", "heartbeat", {"name": "ticker", "product_ids": ["BTC-GBP", "ETH-GBP"]}]}');
+});
 
-    ws.on('open', function open() {
-        ws.send('{"type": "subscribe", "product_ids": ["BTC-GBP", "ETH-GBP"], "channels": ["level2", "heartbeat", {"name": "ticker", "product_ids": ["BTC-GBP", "ETH-GBP"]}]}');
-    });
-
-    ws.on('message', function incoming(data) {
-        try {
-            var data = JSON.parse(data)
-            if (data.product_id == "BTC-GBP") {
-                lastBTCPrice = data.changes[0][1]
-            } else if (data.product_id == "ETH-GBP") {
-                lastETHPrice = data.changes[0][1]
-            }
-        } catch (err) {
-            // Just ignore error, only happens when the coinbase socket doesn't return any data. 
+ws.on('message', function incoming(data) {
+    try {
+        var data = JSON.parse(data)
+        if (data.product_id == "BTC-GBP") {
+            lastBTCPrice = data.changes[0][1]
+        } else if (data.product_id == "ETH-GBP") {
+            lastETHPrice = data.changes[0][1]
         }
-    });
+    } catch (err) {
+        // Just ignore error, only happens when the coinbase socket doesn't return any data. 
+    }
+});
+
+io.sockets.on('connection', function (socket) {
+    socket.join('clients')
 })
 
 setInterval(function () {
