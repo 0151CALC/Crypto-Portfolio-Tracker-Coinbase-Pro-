@@ -112,6 +112,27 @@
                 graph6: null,
             }
 
+            function showDiffs() {
+
+                //console.log(calcDiff(graphData["graph1"][0][2], graphData["graph1"][graphData["graph1"].length - 1][3]))
+                //console.log(calcDiff(graphData["graph2"][0][2], graphData["graph2"][graphData["graph2"].length - 1][3]))
+                //console.log(calcDiff(graphData["graph3"][0][2], graphData["graph3"][graphData["graph3"].length - 1][3]))
+                //console.log(calcDiff(graphData["graph4"][0][2], graphData["graph4"][graphData["graph4"].length - 1][3]))
+                //console.log(calcDiff(graphData["graph5"][0][2], graphData["graph5"][graphData["graph5"].length - 1][3]))
+                //console.log(calcDiff(graphData["graph6"][0][2], graphData["graph6"][graphData["graph6"].length - 1][3]))
+
+                console.log(calcDiff(graphData["graph1"][graphData["graph1"].length - 1][3], graphData["graph1"][0][2]))
+                console.log(calcDiff(graphData["graph2"][graphData["graph2"].length - 1][3], graphData["graph2"][0][2]))
+                console.log(calcDiff(graphData["graph3"][graphData["graph3"].length - 1][3], graphData["graph3"][0][2]))
+                console.log(calcDiff(graphData["graph4"][graphData["graph4"].length - 1][3], graphData["graph4"][0][2]))
+                console.log(calcDiff(graphData["graph5"][graphData["graph5"].length - 1][3], graphData["graph5"][0][2]))
+                console.log(calcDiff(graphData["graph6"][graphData["graph6"].length - 1][3], graphData["graph6"][0][2]))
+
+                function calcDiff(var1, var2) {
+                    return 100 * Math.abs((var1 - var2) / ((var1 + var2) / 2));
+                }
+            }
+
             function drawChart(graphData, graph) {
                 var data = google.visualization.arrayToDataTable(graphData, true);
 
@@ -151,8 +172,8 @@
                 var chart = new google.visualization.CandlestickChart(document.getElementById(graph));
                 chart.draw(data, options);
             }
-            const BTCAmount = 0.09466292;
-            const ETHAmount = 0.21758439;
+            const BTCAmount = 0.10051418;
+            const ETHAmount = 0.13798240;
 
             var socket = io();
             var BTCPrice = 0;
