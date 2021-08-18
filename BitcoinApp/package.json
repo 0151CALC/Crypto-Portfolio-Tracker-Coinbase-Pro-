@@ -16,7 +16,7 @@
     "request": "^2.88.2",
     "socket.io": "^1.4.5",
     "ws": "^8.0.0",
-    "csv-parser": "3.0.0"
+    "csv-parser": "^2.3.5"
   },
   "devDependencies": {
     "got": "^11.8.2",
