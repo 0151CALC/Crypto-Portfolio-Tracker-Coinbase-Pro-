@@ -5,6 +5,11 @@
         <title>My Bitcoin Data</title>
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
         <style>
+
+            body {
+                background-color: black;
+            }
+
             .content {
                 position: relative;
                 width: 100%;
@@ -50,21 +55,20 @@
                 background-color: red;
             }
 
+            #tableContainer {
+                width: 100%;
+                float: left;
+            }
+
             td {
-                background-color: black;
-            }
-
-            th {
-                background-color: rgb(54, 54, 54);
                 color: white;
+                border: 1px solid white;
+                padding: 10px;
             }
 
-            .borderless td, .borderless th {
-                border: none;
-            }
-
-            .table {
-                margin: 0;
+            table {
+                margin: 0 auto;
+                border-collapse: collapse;
             }
         </style>
     </head>
@@ -98,6 +102,11 @@
             <div class="graphContainer" ID="graph5"></div>
             <div class="graphContainer" ID="graph6"></div>
         </div>
+        <div class="tableContainer">
+            <table id="netProfitTable">
+                <tbody id="netProfitTableBody"></tbody>
+            </table>
+        </div>
 
         <script>
 
@@ -110,27 +119,6 @@
                 graph4: null,
                 graph5: null,
                 graph6: null,
-            }
-
-            function showDiffs() {
-
-                //console.log(calcDiff(graphData["graph1"][0][2], graphData["graph1"][graphData["graph1"].length - 1][3]))
-                //console.log(calcDiff(graphData["graph2"][0][2], graphData["graph2"][graphData["graph2"].length - 1][3]))
-                //console.log(calcDiff(graphData["graph3"][0][2], graphData["graph3"][graphData["graph3"].length - 1][3]))
-                //console.log(calcDiff(graphData["graph4"][0][2], graphData["graph4"][graphData["graph4"].length - 1][3]))
-                //console.log(calcDiff(graphData["graph5"][0][2], graphData["graph5"][graphData["graph5"].length - 1][3]))
-                //console.log(calcDiff(graphData["graph6"][0][2], graphData["graph6"][graphData["graph6"].length - 1][3]))
-
-                console.log(calcDiff(graphData["graph1"][graphData["graph1"].length - 1][3], graphData["graph1"][0][2]))
-                console.log(calcDiff(graphData["graph2"][graphData["graph2"].length - 1][3], graphData["graph2"][0][2]))
-                console.log(calcDiff(graphData["graph3"][graphData["graph3"].length - 1][3], graphData["graph3"][0][2]))
-                console.log(calcDiff(graphData["graph4"][graphData["graph4"].length - 1][3], graphData["graph4"][0][2]))
-                console.log(calcDiff(graphData["graph5"][graphData["graph5"].length - 1][3], graphData["graph5"][0][2]))
-                console.log(calcDiff(graphData["graph6"][graphData["graph6"].length - 1][3], graphData["graph6"][0][2]))
-
-                function calcDiff(var1, var2) {
-                    return 100 * Math.abs((var1 - var2) / ((var1 + var2) / 2));
-                }
             }
 
             function drawChart(graphData, graph) {
@@ -172,12 +160,37 @@
                 var chart = new google.visualization.CandlestickChart(document.getElementById(graph));
                 chart.draw(data, options);
             }
+
+            function createTable(tableData) {
+                var tableBody = document.createElement('tbody')
+                for (i = 0; i < tableData.length; i++) {
+                    var row = document.createElement('tr');
+                    for (j = 0; j < tableData[i].length; j++) {
+                        var cell = document.createElement('td');
+                        cell.appendChild(document.createTextNode(tableData[i][j]));
+                        if (buyData.length != 0 && (j == 3 || j == 4)) {
+                            cell.style.color = getNumberSignColour(tableData[i][j])
+                        }
+                        if (j == 3) {
+                            cell.innerHTML += '%'
+                        }
+                        row.appendChild(cell)
+                    }
+                    tableBody.appendChild(row)
+                }
+
+                mainTable = document.getElementById('netProfitTable')
+                mainTable.innerHTML = ''
+                mainTable.appendChild(tableBody)
+            }
+
             const BTCAmount = 0.10051418;
             const ETHAmount = 0.13798240;
 
             var socket = io();
             var BTCPrice = 0;
             var ETHPrice = 0;
+            var buyData = [];
 
             socket.on('graphData', function (data) {
                 graphData[data.graph] = data.data
@@ -202,14 +215,23 @@
 
                 document.getElementById("total").innerHTML = total + "<br>" + (total - data.totalInvested).toFixed(2)
                 document.getElementById("total").style.color = getColour(0, (total - data.totalInvested))
-
-                function getColour(var1, var2) {
-                    if (var1 < var2) {
-                        return "green"
-                    } 
-                    return "red"
-                }
+                createTable(data.buyData)
+                buyData = data.buyData
             })
+
+            function getColour(var1, var2) {
+                if (var1 < var2) {
+                    return "green"
+                }
+                return "red"
+            }
+
+            function getNumberSignColour(number) {
+                if (Math.sign(number) == 1) {
+                    return "green"
+                }
+                return "red"
+            }
         </script>
     </body>
 </html>

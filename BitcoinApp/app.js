@@ -4,8 +4,71 @@ const app = express();
 const serv = require('http').Server(app);
 const io = require('socket.io')(serv);
 const fs = require('fs');
+const csv = require('csv-parser');
 const request = require('request');
 const WebSocket = require('ws')
+
+class Buys {
+    constructor() {
+        this.buys = []
+    }
+    newBuy(product, price, GBPamount, amount, date, feeInGBP) {
+        let b = new Buy(product, price, GBPamount, amount, date, feeInGBP)
+        this.buys.push(b);
+        return b
+    }
+    getAmountOf(product) {
+        var eth = 0
+        for (i = 0; i < this.buys.length; i++) {
+            if (this.buys[i].product == product) {
+                eth = eth + parseFloat(this.buys[i].amount)
+            }
+        }
+        return eth
+    }
+    getData(BTCPrice, ETHPrice) {
+        var data = []
+        for (i = 0; i < this.buys.length; i++) {
+            var buy = this.buys[i]
+            var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
+
+            data.push(buyData);
+
+        }
+
+        return data;
+    }
+}
+
+class Buy {
+    constructor(product, price, GBPamount, amount, date, feeInGBP) {
+        this.product = product;
+        this.price = price;
+        this.GBPamount = Math.abs(GBPamount);
+        this.amount = amount;
+        this.date = date;
+        this.feeInGBP = feeInGBP;
+    }
+    calcProfit(BTCPrice, ETHPrice) {
+        var price
+        if (this.product == "BTC-GBP") {
+            price = BTCPrice
+        } else if (this.product == "ETH-GBP") {
+            price = ETHPrice
+        }
+        return Number.parseFloat((this.amount * price) - (this.amount * this.price)).toFixed(2)
+    }
+    calcPercentageDiff(BTCPrice, ETHPrice) {
+        var initPrice = (this.amount * this.price)
+        var newPrice;
+        if (this.product == "BTC-GBP") {
+            newPrice = this.amount * BTCPrice
+        } else if (this.product == "ETH-GBP") {
+            newPrice = this.amount * ETHPrice
+        }
+        return Number.parseFloat(((newPrice - initPrice) / initPrice) * 100).toFixed(2)
+    }
+}
 
 app.get("/", function (req, res) {
     res.sendFile(__dirname + '/index.html');
@@ -19,12 +82,24 @@ if (process.env.HEROKU_PORT) {
 serv.listen(port);
 console.log("Server has started...");
 
+let buys = new Buys()
+
 var totalInvested = 0;
+
 var buyData = JSON.parse(fs.readFileSync("data.json"));
 
 for (var i in buyData["buys"]) {
     totalInvested += buyData["buys"][i].amountInGBP
 }
+
+fs.createReadStream('data.csv')
+.pipe(csv())
+    .on('data', (row) => {
+        buys.newBuy(row.product, row.price, row.total, row.size, row['created at'], row.fee);
+})
+.on('end', () => {
+    console.log('CSV file successfully processed');
+});
 
 var lastBTCPrice = 0;
 var lastETHPrice = 0;
@@ -95,8 +170,9 @@ function update() {
     io.to('clients').emit('data', {
         BTCPrice: lastBTCPrice,
         ETHPrice: lastETHPrice,
-        totalInvested: totalInvested
-     });
+        totalInvested: totalInvested,
+        buyData: buys.getData(lastBTCPrice, lastETHPrice)
+    });
 }
 
 function getDate(periodInMonths, periodInDays, periodInHours) {
