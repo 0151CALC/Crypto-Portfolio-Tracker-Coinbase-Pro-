@@ -17,25 +17,42 @@ class Buys {
         this.buys.push(b);
         return b
     }
-    getAmountOf(product) {
-        var eth = 0
+    getInitAndNew(BTCPrice, ETHPrice) {
+        var initPrice = 0.0;
+        var newPrice = 0.0;
         for (i = 0; i < this.buys.length; i++) {
-            if (this.buys[i].product == product) {
-                eth = eth + parseFloat(this.buys[i].amount)
+            var buy = this.buys[i];
+            var price;
+            if (buy.product == "BTC-GBP") {
+                price = BTCPrice
+            } else if (buy.product == "ETH-GBP") {
+                price = ETHPrice
             }
+            initPrice += (buy.amount * buy.price)
+            newPrice += (buy.amount * price)
         }
-        return eth
+        var data = {
+            init: initPrice,
+            new: newPrice
+        }
+        return data
+    }
+    getNetProfit(BTCPrice, ETHPrice) {
+        var data = this.getInitAndNew(BTCPrice, ETHPrice)
+        return Number.parseFloat(data.new - data.init).toFixed(2)
+    }
+    getPercentageDiff(BTCPrice, ETHPrice) {
+        var data = this.getInitAndNew(BTCPrice, ETHPrice)
+        return Number.parseFloat(((data.new - data.init) / data.init) * 100).toFixed(2)
     }
     getData(BTCPrice, ETHPrice) {
         var data = []
         for (i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i]
             var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
-
             data.push(buyData);
-
         }
-
+        data.push(['Total', '', '', this.getPercentageDiff(BTCPrice, ETHPrice), this.getNetProfit(BTCPrice, ETHPrice)]);
         return data;
     }
 }
