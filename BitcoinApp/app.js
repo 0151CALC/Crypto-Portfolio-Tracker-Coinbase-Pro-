@@ -17,19 +17,53 @@ class Buys {
         this.buys.push(b);
         return b
     }
-    getInitAndNew(BTCPrice, ETHPrice) {
+    getTotalAmountOfProduct(product) {
+        var amount = 0.0;
+        for (i = 0; i < this.buys.length; i++) {
+            var buy = this.buys[i];
+            if (buy.product == product) {
+                amount += Number.parseFloat(buy.amount);
+            }
+        }
+        return amount
+    }
+    getAveragePriceOfProduct(product) {
+        var totalPrice = 0.0;
+        var amountOfBuys = 0;
+        for (i = 0; i < this.buys.length; i++) {
+            var buy = this.buys[i];
+            if (buy.product == product) {
+                totalPrice += Number.parseFloat(buy.price);
+                amountOfBuys += 1;
+            }
+        }
+        return Number.parseFloat(totalPrice / amountOfBuys).toFixed(0);
+    }
+    getTotalAmountPaidForProduct(product) {
+        var paid = 0.0;
+        for (i = 0; i < this.buys.length; i++) {
+            var buy = this.buys[i];
+            if (buy.product == product) {
+                paid += Number.parseFloat(buy.amount * buy.price);
+            }
+        }
+        return Number.parseFloat(paid).toFixed(2);
+    }
+    getInitAndNew(product, BTCPrice, ETHPrice) {
         var initPrice = 0.0;
         var newPrice = 0.0;
         for (i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i];
-            var price;
-            if (buy.product == "BTC-GBP") {
-                price = BTCPrice
-            } else if (buy.product == "ETH-GBP") {
-                price = ETHPrice
+            if (product == buy.product || product == "Both") {
+                var price;
+                if (buy.product == "BTC-GBP") {
+                    price = BTCPrice
+                } else if (buy.product == "ETH-GBP") {
+                    price = ETHPrice
+                }
+                initPrice += (buy.amount * buy.price)
+                newPrice += (buy.amount * price)
             }
-            initPrice += (buy.amount * buy.price)
-            newPrice += (buy.amount * price)
         }
         var data = {
             init: initPrice,
@@ -37,12 +71,12 @@ class Buys {
         }
         return data
     }
-    getNetProfit(BTCPrice, ETHPrice) {
-        var data = this.getInitAndNew(BTCPrice, ETHPrice)
+    getNetProfit(product, BTCPrice, ETHPrice) {
+        var data = this.getInitAndNew(product, BTCPrice, ETHPrice)
         return Number.parseFloat(data.new - data.init).toFixed(2)
     }
-    getPercentageDiff(BTCPrice, ETHPrice) {
-        var data = this.getInitAndNew(BTCPrice, ETHPrice)
+    getPercentageDiff(product, BTCPrice, ETHPrice) {
+        var data = this.getInitAndNew(product, BTCPrice, ETHPrice)
         return Number.parseFloat(((data.new - data.init) / data.init) * 100).toFixed(2)
     }
     getData(BTCPrice, ETHPrice) {
@@ -52,7 +86,9 @@ class Buys {
             var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
             data.push(buyData);
         }
-        data.push(['Total', '', '', this.getPercentageDiff(BTCPrice, ETHPrice), this.getNetProfit(BTCPrice, ETHPrice)]);
+        data.push(['ETH Total', '', `${this.getTotalAmountOfProduct('ETH-GBP')} @ ${this.getAveragePriceOfProduct('ETH-GBP')} For ${this.getTotalAmountPaidForProduct('ETH-GBP')}`, this.getPercentageDiff('ETH-GBP', BTCPrice, ETHPrice), this.getNetProfit('ETH-GBP', BTCPrice, ETHPrice)]);
+        data.push(['BTC Total', '', `${this.getTotalAmountOfProduct('BTC-GBP')} @ ${this.getAveragePriceOfProduct('BTC-GBP')} For ${this.getTotalAmountPaidForProduct('BTC-GBP')}`, this.getPercentageDiff('BTC-GBP', BTCPrice, ETHPrice), this.getNetProfit('BTC-GBP', BTCPrice, ETHPrice)]);
+        data.push(['Total', '', '', this.getPercentageDiff('Both', BTCPrice, ETHPrice), this.getNetProfit('Both', BTCPrice, ETHPrice)]);
         return data;
     }
 }
