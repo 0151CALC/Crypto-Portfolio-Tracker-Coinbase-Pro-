@@ -182,13 +182,16 @@ io.sockets.on('connection', function (socket) {
 
 setInterval(function () {
     update()
+}, 500);
+
+setInterval(function () {
     sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS')
     sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS')
     sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS')
     sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD')
     sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD')
     sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD')
-}, 1000);
+}, 5000);
 
 function sendGraphData(fromDate, ToDate, graph, dateFormat) {
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
