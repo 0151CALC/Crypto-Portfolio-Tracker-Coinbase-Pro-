@@ -11,12 +11,14 @@
     "test": "node app.js"
   },
   "dependencies": {
+    "coinbase-pro-api": "^1.0.2",
+    "coinbase-pro-node": "^3.0.5",
+    "csv-parser": "^2.3.5",
     "ejs": "^3.1.6",
     "express": "^4.17.1",
     "request": "^2.88.2",
     "socket.io": "^1.4.5",
-    "ws": "^8.0.0",
-    "csv-parser": "^2.3.5"
+    "ws": "^8.0.0"
   },
   "devDependencies": {
     "got": "^11.8.2",

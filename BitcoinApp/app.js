@@ -25,7 +25,7 @@ class Buys {
                 amount += Number.parseFloat(buy.amount);
             }
         }
-        return amount
+        return amount.toFixed(8)
     }
     getAveragePriceOfProduct(product) {
         var totalPrice = 0.0;
@@ -97,7 +97,7 @@ class Buy {
     constructor(product, price, GBPamount, amount, date, feeInGBP) {
         this.product = product;
         this.price = price;
-        this.GBPamount = Math.abs(GBPamount);
+        this.GBPamount = GBPamount;
         this.amount = amount;
         this.date = date;
         this.feeInGBP = feeInGBP;
@@ -145,14 +145,16 @@ for (var i in buyData["buys"]) {
     totalInvested += buyData["buys"][i].amountInGBP
 }
 
-fs.createReadStream('data.csv')
-.pipe(csv())
-    .on('data', (row) => {
-        buys.newBuy(row.product, row.price, row.total, row.size, row['created at'], row.fee);
-})
-.on('end', () => {
-    console.log('CSV file successfully processed');
-});
+const { CoinbasePro } = require('coinbase-pro-node');
+
+const auth = {
+    apiKey: '69f33f5d5b92d804970f110c9f324d6e',
+    apiSecret: 'iTlm+vdw8mS2JceSutCB7IJJAXcDaDTW1py4r0Nx9OjgpnjKo1+m0qESrtzIfvi7hvNDmy/mleeTBnhJ9rg7Rw==',
+    passphrase: 'Cc19478265',
+    useSandbox: false,
+};
+
+const client = new CoinbasePro(auth);
 
 var lastBTCPrice = 0;
 var lastETHPrice = 0;
@@ -192,6 +194,38 @@ setInterval(function () {
     sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD')
     sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD')
 }, 5000);
+
+updateFills()
+
+setInterval(function () {
+    updateFills()
+}, 900000);
+
+//Just some testing ignore.
+
+//client.rest.transfer.getTransfers('deposit').then(transfers => {
+
+//    for (i = 0; i < transfers.data.length; i++) {
+//        if (!!transfers.data[i].details.crypto_address) {
+//            console.log(transfers.data[i]);
+//        }
+//    }
+//});
+
+function updateFills() {
+    buys.buys = []
+    client.rest.fill.getFillsByProductId('BTC-GBP').then(buy => {
+        for (i = 0; i < buy.data.length; i++) {
+            buys.newBuy(buy.data[i].product_id, buy.data[i].price, ((buy.data[i].size * buy.data[i].price) + Number.parseFloat(buy.data[i].fee)), buy.data[i].size, new Date(buy.data[i].created_at), buy.data[i].fee)
+        }
+    });
+    client.rest.fill.getFillsByProductId('ETH-GBP').then(buy => {
+        for (i = 0; i < buy.data.length; i++) {
+            buys.newBuy(buy.data[i].product_id, buy.data[i].price, ((buy.data[i].size * buy.data[i].price) + Number.parseFloat(buy.data[i].fee)), buy.data[i].size, new Date(buy.data[i].created_at), buy.data[i].fee)
+        }
+    });
+}
+
 
 function sendGraphData(fromDate, ToDate, graph, dateFormat) {
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
@@ -241,7 +275,6 @@ function getDate(periodInMonths, periodInDays, periodInHours) {
 }
 
 function getFormattedDate(date, portion) {
-
     if (portion == 'Full') {
         return date.getFullYear() + '-' + addLeadingZero(date.getMonth() + 1) + '-' + addLeadingZero(date.getDate()) + 'T' + addLeadingZero(date.getHours()) + ':' + addLeadingZero(date.getMinutes()) + ':' + addLeadingZero(date.getSeconds())
     } else if (portion == 'HMS') {
