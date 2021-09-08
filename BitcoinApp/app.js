@@ -17,6 +17,13 @@ class Buys {
         this.buys.push(b);
         return b
     }
+    getAmountPaidForAllProducts() {
+        var amount = 0.0;
+        for (i = 0; i < this.buys.length; i++) {
+            amount += Number.parseFloat(this.buys[i].GBPamount);
+        }
+        return amount.toFixed(2)
+    }
     getTotalAmountOfProduct(product) {
         var amount = 0.0;
         for (i = 0; i < this.buys.length; i++) {
@@ -137,24 +144,12 @@ console.log("Server has started...");
 
 let buys = new Buys()
 
-var totalInvested = 0;
-
-var buyData = JSON.parse(fs.readFileSync("data.json"));
-
-for (var i in buyData["buys"]) {
-    totalInvested += buyData["buys"][i].amountInGBP
-}
-
 const { CoinbasePro } = require('coinbase-pro-node');
 
-var apiKey = process.env.CP_KEY ?? ''
-var apiSecret = process.env.CP_SS ?? ''
-var passphrase = process.env.CP_PP ?? ''
-
 const auth = {
-    apiKey: apiKey,
-    apiSecret: apiSecret,
-    passphrase: passphrase,
+    apiKey: '69f33f5d5b92d804970f110c9f324d6e',
+    apiSecret: 'iTlm+vdw8mS2JceSutCB7IJJAXcDaDTW1py4r0Nx9OjgpnjKo1+m0qESrtzIfvi7hvNDmy/mleeTBnhJ9rg7Rw==',
+    passphrase: 'Cc19478265',
     useSandbox: false,
 };
 
@@ -264,7 +259,10 @@ function update() {
     io.to('clients').emit('data', {
         BTCPrice: lastBTCPrice,
         ETHPrice: lastETHPrice,
-        totalInvested: totalInvested,
+        BTCAmount: buys.getTotalAmountOfProduct('BTC-GBP'),
+        ETHAmount: buys.getTotalAmountOfProduct('ETH-GBP'),
+        netProfit: buys.getNetProfit('Both', lastBTCPrice, lastETHPrice),
+        totalInvested: buys.getAmountPaidForAllProducts(),
         buyData: buys.getData(lastBTCPrice, lastETHPrice)
     });
 }
