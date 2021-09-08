@@ -147,10 +147,14 @@ for (var i in buyData["buys"]) {
 
 const { CoinbasePro } = require('coinbase-pro-node');
 
+var apiKey = process.env.CP_KEY ?? ''
+var apiSecret = process.env.CP_SS ?? ''
+var passphrase = process.env.CP_PP ?? ''
+
 const auth = {
-    apiKey: process.env.CP_KEY,
-    apiSecret: process.env.CP_SS,
-    passphrase: process.env.CP_PP,
+    apiKey: apiKey,
+    apiSecret: apiSecret,
+    passphrase: passphrase,
     useSandbox: false,
 };
 
