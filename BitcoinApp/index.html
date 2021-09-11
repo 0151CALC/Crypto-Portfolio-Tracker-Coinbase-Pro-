@@ -214,7 +214,7 @@
                 document.getElementById("ETHAmount").innerHTML = (ETHPrice * data.ETHAmount).toFixed(2)
 
                 document.getElementById("total").innerHTML = ((BTCPrice * data.BTCAmount) + ETHPrice * data.ETHAmount).toFixed(2) + "<br>" + data.netProfit
-                document.getElementById("total").style.color = getColour(0, (total - data.totalInvested))
+                document.getElementById("total").style.color = getColour(0, data.netProfit)
                 
                 data.buyData = sortByDate(data.buyData);
                 createTable(data.buyData)
