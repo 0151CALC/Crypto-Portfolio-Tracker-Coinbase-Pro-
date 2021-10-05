@@ -121,7 +121,7 @@
                 graph6: null,
             }
 
-            function drawChart(graphData, graph) {
+            function drawChart(graphData, graph, percentage) {
                 var data = google.visualization.arrayToDataTable(graphData, true);
 
                 var options = {
@@ -154,7 +154,12 @@
                         },
                         textPosition: 'in'
                     },
-                    backgroundColor: '#000000'
+                    backgroundColor: '#000000',
+                    title: percentage + '%   | ' + getGraphDuration(graph) ,
+                    titlePosition: 'in',
+                    titleTextStyle: {
+                        color: getNumberSignColour(Number.parseFloat(percentage))
+                    }
                 };
 
                 var chart = new google.visualization.CandlestickChart(document.getElementById(graph));
@@ -190,14 +195,12 @@
 
             socket.on('graphData', function (data) {
                 graphData[data.graph] = data.data
-                google.charts.setOnLoadCallback(drawChart(graphData[data.graph], data.graph));
+                google.charts.setOnLoadCallback(drawChart(graphData[data.graph], data.graph, data.percentage));
             })
 
             socket.on('data', function (data) {
                 document.getElementById("BTCPrice").style.color = getColour(BTCPrice, data.BTCPrice)
                 document.getElementById("ETHPrice").style.color = getColour(ETHPrice, data.ETHPrice)
-
-                var total = ((BTCPrice * BTCAmount) + (ETHPrice * ETHAmount)).toFixed(2);
 
                 BTCPrice = data.BTCPrice;
                 ETHPrice = data.ETHPrice;
@@ -254,6 +257,32 @@
                     return "green"
                 }
                 return "red"
+            }
+
+            function getGraphDuration(graph) {
+                switch (graph) {
+                    case 'graph1':
+                        return 'Last Hour'
+                        break;
+                    case 'graph2':
+                        return 'Last 3 Hours'
+                        break;
+                    case 'graph3':
+                        return 'Last 6 Hours'
+                        break;
+                    case 'graph4':
+                        return 'Last Week'
+                        break;
+                    case 'graph5':
+                        return 'Last Month'
+                        break;
+                    case 'graph6':
+                        return 'Last 6 Months'
+                        break;
+                    default:
+                        return 'How???'
+                        break;
+                }
             }
         </script>
     </body>
