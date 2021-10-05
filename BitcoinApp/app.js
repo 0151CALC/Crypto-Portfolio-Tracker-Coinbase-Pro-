@@ -3,8 +3,6 @@ const express = require('express')
 const app = express();
 const serv = require('http').Server(app);
 const io = require('socket.io')(serv);
-const fs = require('fs');
-const csv = require('csv-parser');
 const request = require('request');
 const WebSocket = require('ws')
 
@@ -18,11 +16,12 @@ class Buys {
         return b
     }
     getAmountPaidForAllProducts() {
-        var amount = 0.0;
+        var paid = 0.0;
         for (i = 0; i < this.buys.length; i++) {
-            amount += Number.parseFloat(this.buys[i].GBPamount);
+            var buy = this.buys[i];
+            paid += Number.parseFloat(buy.amount * buy.price);
         }
-        return amount.toFixed(2)
+        return Number.parseFloat(paid).toFixed(2);
     }
     getTotalAmountOfProduct(product) {
         var amount = 0.0;
@@ -90,12 +89,14 @@ class Buys {
         var data = []
         for (i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i]
-            var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
-            data.push(buyData);
+            if (buy.GBPamount > 5.00) {
+                var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
+                data.push(buyData);
+            }
         }
         data.push(['ETH Total', '', `${this.getTotalAmountOfProduct('ETH-GBP')} @ ${this.getAveragePriceOfProduct('ETH-GBP')} For ${this.getTotalAmountPaidForProduct('ETH-GBP')}`, this.getPercentageDiff('ETH-GBP', BTCPrice, ETHPrice), this.getNetProfit('ETH-GBP', BTCPrice, ETHPrice)]);
         data.push(['BTC Total', '', `${this.getTotalAmountOfProduct('BTC-GBP')} @ ${this.getAveragePriceOfProduct('BTC-GBP')} For ${this.getTotalAmountPaidForProduct('BTC-GBP')}`, this.getPercentageDiff('BTC-GBP', BTCPrice, ETHPrice), this.getNetProfit('BTC-GBP', BTCPrice, ETHPrice)]);
-        data.push(['Total', '', '', this.getPercentageDiff('Both', BTCPrice, ETHPrice), this.getNetProfit('Both', BTCPrice, ETHPrice)]);
+        data.push(['Total', '', `${this.getAmountPaidForAllProducts()} Total Invested`, this.getPercentageDiff('Both', BTCPrice, ETHPrice), this.getNetProfit('Both', BTCPrice, ETHPrice)]);
         return data;
     }
 }
@@ -128,6 +129,12 @@ class Buy {
         }
         return Number.parseFloat(((newPrice - initPrice) / initPrice) * 100).toFixed(2)
     }
+}
+
+function calcPercentageDiff(newNum, oldNum) {
+    var newNum = Number.parseFloat(newNum)
+    var oldNum = Number.parseFloat(oldNum)
+    return Number.parseFloat(((oldNum - newNum) / newNum) * 100).toFixed(2)
 }
 
 app.get("/", function (req, res) {
@@ -247,9 +254,11 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat) {
                 var date = new Date(unixTime * 1000);
                 formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
             }
+
             io.to('clients').emit('graphData', {
                 graph: graph,
-                data: formattedDataArray
+                data: formattedDataArray,
+                percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4])
             })
         }
     });
