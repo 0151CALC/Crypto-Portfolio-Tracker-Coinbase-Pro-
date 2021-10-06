@@ -248,17 +248,23 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat) {
         if (!error && response.statusCode == 200) {
 
             var formattedDataArray = []
+            var highest = 0.0;
+            var lowest = body[0][1];
 
             for (i = 0; i < body.length; i++) {
                 var unixTime = body[i][0]
                 var date = new Date(unixTime * 1000);
+                if (Number.parseFloat(body[i][2]) > highest) { highest = Number.parseFloat(body[i][2]) }
+                if (Number.parseFloat(body[i][1]) < lowest) { lowest = Number.parseFloat(body[i][1]) }
                 formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
             }
 
             io.to('clients').emit('graphData', {
                 graph: graph,
                 data: formattedDataArray,
-                percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4])
+                percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
+                highest: highest,
+                lowest: lowest
             })
         }
     });
