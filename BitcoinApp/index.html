@@ -121,7 +121,7 @@
                 graph6: null,
             }
 
-            function drawChart(graphData, graph, percentage, highest, lowest) {
+            function drawChart(graphData, graph, title, percentage) {
                 var data = google.visualization.arrayToDataTable(graphData, true);
 
                 var options = {
@@ -155,7 +155,7 @@
                         textPosition: 'in'
                     },
                     backgroundColor: '#000000',
-                    title: percentage + '%   | ' + getGraphDuration(graph) + '  |  Low: ' + lowest + '  |  High: ' + highest,
+                    title: title,
                     titlePosition: 'in',
                     titleTextStyle: {
                         color: getNumberSignColour(Number.parseFloat(percentage))
@@ -195,7 +195,15 @@
 
             socket.on('graphData', function (data) {
                 graphData[data.graph] = data.data
-                google.charts.setOnLoadCallback(drawChart(graphData[data.graph], data.graph, data.percentage, data.highest, data.lowest));
+
+                var title = ""
+                if (data.graph == "graph1") {
+                    title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest + '  |  Current: ' + data.data[data.data.length - 1][3]
+                } else {
+                    title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest
+                }
+
+                google.charts.setOnLoadCallback(drawChart(graphData[data.graph], data.graph, title, data.percentage));
             })
 
             socket.on('data', function (data) {
