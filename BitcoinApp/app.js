@@ -1,4 +1,3 @@
-
 const express = require('express')
 const app = express();
 const serv = require('http').Server(app);
@@ -17,7 +16,7 @@ class Buys {
     }
     getAmountPaidForAllProducts() {
         var paid = 0.0;
-        for (i = 0; i < this.buys.length; i++) {
+        for (var i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i];
             paid += Number.parseFloat(buy.amount * buy.price);
         }
@@ -25,7 +24,7 @@ class Buys {
     }
     getTotalAmountOfProduct(product) {
         var amount = 0.0;
-        for (i = 0; i < this.buys.length; i++) {
+        for (var i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i];
             if (buy.product == product) {
                 amount += Number.parseFloat(buy.amount);
@@ -36,7 +35,7 @@ class Buys {
     getAveragePriceOfProduct(product) {
         var totalPrice = 0.0;
         var amountOfBuys = 0;
-        for (i = 0; i < this.buys.length; i++) {
+        for (var i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i];
             if (buy.product == product) {
                 totalPrice += Number.parseFloat(buy.price);
@@ -47,7 +46,7 @@ class Buys {
     }
     getTotalAmountPaidForProduct(product) {
         var paid = 0.0;
-        for (i = 0; i < this.buys.length; i++) {
+        for (var i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i];
             if (buy.product == product) {
                 paid += Number.parseFloat(buy.amount * buy.price);
@@ -58,7 +57,7 @@ class Buys {
     getInitAndNew(product, BTCPrice, ETHPrice) {
         var initPrice = 0.0;
         var newPrice = 0.0;
-        for (i = 0; i < this.buys.length; i++) {
+        for (var i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i];
             if (product == buy.product || product == "Both") {
                 var price;
@@ -87,7 +86,7 @@ class Buys {
     }
     getData(BTCPrice, ETHPrice) {
         var data = []
-        for (i = 0; i < this.buys.length; i++) {
+        for (var i = 0; i < this.buys.length; i++) {
             var buy = this.buys[i]
             if (buy.GBPamount > 5.00) {
                 var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
@@ -251,7 +250,7 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat) {
             var highest = 0.0;
             var lowest = body[0][1];
 
-            for (i = 0; i < body.length; i++) {
+            for (var i = 0; i < body.length; i++) {
                 var unixTime = body[i][0]
                 var date = new Date(unixTime * 1000);
                 if (Number.parseFloat(body[i][2]) > highest) { highest = Number.parseFloat(body[i][2]) }
