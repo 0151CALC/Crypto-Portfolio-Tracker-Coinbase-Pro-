@@ -152,10 +152,17 @@ let buys = new Buys()
 
 const { CoinbasePro } = require('coinbase-pro-node');
 
+//const auth = {
+//    apiKey: process.env.CP_KEY,
+//    apiSecret: process.env.CP_SS,
+//    passphrase: process.env.CP_PP,
+//    useSandbox: false,
+//};
+
 const auth = {
-    apiKey: process.env.CP_KEY,
-    apiSecret: process.env.CP_SS,
-    passphrase: process.env.CP_PP,
+    apiKey: '2d9f48ca99d00214b295d73f08d291b9',
+    apiSecret: 'Au8Jcn2JZZelIu8uIScdwnERy4sSxqn4BAyttqDMxMCkDuolPMQoBunBdwKL5waJ3GaORmP9UwDcIg5UkuJZng==',
+    passphrase: 'Cc19478265',
     useSandbox: false,
 };
 
@@ -192,12 +199,12 @@ setInterval(function () {
 }, 500);
 
 setInterval(function () {
-    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS')
-    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS')
-    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS')
-    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD')
-    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD')
-    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD')
+    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', 'BTC-GBP')
+    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', 'BTC-GBP')
+    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', 'BTC-GBP')
+    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', 'BTC-GBP')
+    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', 'BTC-GBP')
+    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', 'BTC-GBP')
 }, 5000);
 
 updateFills()
@@ -232,7 +239,7 @@ function updateFills() {
 }
 
 
-function sendGraphData(fromDate, ToDate, graph, dateFormat) {
+function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair) {
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
 
     if (granularity >= 86400) { granularity = 86400 }
@@ -242,7 +249,7 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat) {
     else if (granularity >= 300) { granularity = 300 }
     else if (granularity >= 60) { granularity = 60 }
 
-    var URL = `https://api.pro.coinbase.com/products/BTC-GBP/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
+    var URL = `https://api.pro.coinbase.com/products/${productPair}/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
     request({ url: URL, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body) => {
         if (!error && response.statusCode == 200) {
 
@@ -283,7 +290,7 @@ function update() {
 
 function getDate(periodInMonths, periodInDays, periodInHours) {
     const date = new Date()
-    date.setHours(date.getHours() - 1)
+    date.setHours(date.getHours())
     if (periodInMonths != 0) { date.setMonth(date.getMonth() - periodInMonths) }
     if (periodInDays != 0) { date.setDate(date.getDate() - periodInDays) }
     if (periodInHours != 0) { date.setHours(date.getHours() - periodInHours) }
@@ -305,5 +312,26 @@ function getFormattedDate(date, portion) {
         } else {
             return value;
         }
+    }
+}
+
+function sortByDate(arrayOfObjects) {
+    return arrayOfObjects.sort(compare)
+    function compare(a, b) {
+
+        if (a.date == "") {
+            return 0;
+        }
+
+        const dateA = a.date;
+        const dateB = b.date;
+
+        let comparison = 0;
+        if (dateA < dateB) {
+            comparison = -1;
+        } else if (dateA > dateB) {
+            comparison = 1;
+        }
+        return comparison;
     }
 }
