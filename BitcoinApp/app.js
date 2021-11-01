@@ -152,17 +152,10 @@ let buys = new Buys()
 
 const { CoinbasePro } = require('coinbase-pro-node');
 
-//const auth = {
-//    apiKey: process.env.CP_KEY,
-//    apiSecret: process.env.CP_SS,
-//    passphrase: process.env.CP_PP,
-//    useSandbox: false,
-//};
-
 const auth = {
-    apiKey: '2d9f48ca99d00214b295d73f08d291b9',
-    apiSecret: 'Au8Jcn2JZZelIu8uIScdwnERy4sSxqn4BAyttqDMxMCkDuolPMQoBunBdwKL5waJ3GaORmP9UwDcIg5UkuJZng==',
-    passphrase: 'Cc19478265',
+    apiKey: process.env.CP_KEY,
+    apiSecret: process.env.CP_SS,
+    passphrase: process.env.CP_PP,
     useSandbox: false,
 };
 
