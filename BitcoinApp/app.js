@@ -140,6 +140,10 @@ app.get("/", function (req, res) {
     res.sendFile(__dirname + '/index.html');
 })
 
+app.get("/v2", function (req, res) {
+    res.sendFile(__dirname + '/index2.html');
+})
+
 var port = 2000;
 if (process.env.HEROKU_PORT) {
     port = process.env.PORT

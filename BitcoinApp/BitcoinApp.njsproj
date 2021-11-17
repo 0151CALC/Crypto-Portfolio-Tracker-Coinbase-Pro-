@@ -29,6 +29,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="app.js" />
+    <Content Include="index2.html" />
     <Content Include="packageold.json" />
     <Content Include="README.md" />
   </ItemGroup>
