@@ -11,6 +11,8 @@
     "test": "node app.js"
   },
   "dependencies": {
+    "axios": "^0.24.0",
+    "coinbase": "^2.0.8",
     "coinbase-pro-api": "^1.0.2",
     "coinbase-pro-node": "^3.0.5",
     "csv-parser": "^2.3.5",

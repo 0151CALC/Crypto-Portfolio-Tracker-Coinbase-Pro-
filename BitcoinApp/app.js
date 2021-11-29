@@ -4,6 +4,7 @@ const serv = require('http').Server(app);
 const io = require('socket.io')(serv);
 const request = require('request');
 const WebSocket = require('ws')
+const axios = require("axios");
 
 class Buys {
     constructor() {
@@ -136,13 +137,59 @@ function calcPercentageDiff(newNum, oldNum) {
     return Number.parseFloat(((oldNum - newNum) / newNum) * 100).toFixed(2)
 }
 
-app.get("/", function (req, res) {
-    res.sendFile(__dirname + '/index.html');
-})
+const formUrlEncoded = x =>
+    Object.keys(x).reduce((p, c) => p + `&${c}=${encodeURIComponent(x[c])}`, '')
 
-app.get("/v2", function (req, res) {
+app.get("/", function (req, res) {
     res.sendFile(__dirname + '/index2.html');
-})
+});
+
+app.get("/old", function (req, res) {
+    res.sendFile(__dirname + '/index.html');
+});
+
+app.get("/oauth/redirect", function (req, res) {
+    axios({
+        method: "POST",
+        url: 'https://api.coinbase.com/oauth/token',
+        data: formUrlEncoded({
+            grant_type: 'authorization_code',
+            code: req.query.code,
+            client_id: 'c6e2ce355a64784293d7f9fe43596f5328b526a28b9a4bb80128b3a91095605c',
+            client_secret: 'e8631894dd9ca249dd6816fb55397045223f8a2d0a063d9b915532d6013f42e9',
+            redirect_uri: 'http://localhost:2000/oauth/redirect'
+        }),
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    }).then((response) => {
+
+        var access_token = response.data.access_token
+
+        axios({
+            method: "GET",
+            url: 'https://api.coinbase.com/v2/accounts',
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            console.log(response.data.data[0].id)
+
+            axios({
+                method: "GET",
+                url: `https://api.coinbase.com/v2/accounts/${response.data.data[0].id}/buys`,
+                headers: {
+                    'Authorization': `Bearer ${access_token}`,
+                    'Content-Type': 'application/json'
+                }
+            }).then((response) => {
+                console.log(response.data)
+            })
+        });
+        res.redirect('http://localhost:2000');
+    });
+});
 
 var port = 2000;
 if (process.env.HEROKU_PORT) {
@@ -151,6 +198,21 @@ if (process.env.HEROKU_PORT) {
 
 serv.listen(port);
 console.log("Server has started...");
+
+var socketConnections = []
+
+io.sockets.on('connection', function (socket) {
+    socket.join('clients')
+    socket.join(socket.id)
+    socketConnections.push(socket.id)
+
+    socket.on('disconnect', function () {
+        var index = socketConnections.indexOf(socket.id);
+        socketConnections.splice(index, 1)
+    })
+})
+
+
 
 let buys = new Buys()
 
@@ -162,7 +224,6 @@ const auth = {
     passphrase: process.env.CP_PP,
     useSandbox: false,
 };
-
 const client = new CoinbasePro(auth);
 
 var lastBTCPrice = 0;
@@ -186,10 +247,6 @@ ws.on('message', function incoming(data) {
         // Just ignore error, only happens when the coinbase socket doesn't return any data. 
     }
 });
-
-io.sockets.on('connection', function (socket) {
-    socket.join('clients')
-})
 
 setInterval(function () {
     update()
@@ -274,15 +331,17 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair) {
 }
 
 function update() {
-    io.to('clients').emit('data', {
-        BTCPrice: lastBTCPrice,
-        ETHPrice: lastETHPrice,
-        BTCAmount: buys.getTotalAmountOfProduct('BTC-GBP'),
-        ETHAmount: buys.getTotalAmountOfProduct('ETH-GBP'),
-        netProfit: buys.getNetProfit('Both', lastBTCPrice, lastETHPrice),
-        totalInvested: buys.getAmountPaidForAllProducts(),
-        buyData: buys.getData(lastBTCPrice, lastETHPrice)
-    });
+    for (i = 0; i < socketConnections.length; i++) {
+        io.to(socketConnections[i]).emit('data', {
+            BTCPrice: lastBTCPrice,
+            ETHPrice: lastETHPrice,
+            BTCAmount: buys.getTotalAmountOfProduct('BTC-GBP'),
+            ETHAmount: buys.getTotalAmountOfProduct('ETH-GBP'),
+            netProfit: buys.getNetProfit('Both', lastBTCPrice, lastETHPrice),
+            totalInvested: buys.getAmountPaidForAllProducts(),
+            buyData: buys.getData(lastBTCPrice, lastETHPrice)
+        });
+    }
 }
 
 function getDate(periodInMonths, periodInDays, periodInHours) {
