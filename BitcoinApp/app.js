@@ -200,17 +200,38 @@ serv.listen(port);
 console.log("Server has started...");
 
 var socketConnections = []
+var clientOptions = []
 
 io.sockets.on('connection', function (socket) {
     socket.join('clients')
     socket.join(socket.id)
     socketConnections.push(socket.id)
 
+    clientOptions.push({
+        socketID: socket.id,
+        productPairSelected: 'BTC-GBP'
+    })
+
+    updateGraphs('BTC-GBP', socket.id);
+
     socket.on('disconnect', function () {
         var index = socketConnections.indexOf(socket.id);
         socketConnections.splice(index, 1)
+        clientOptions.splice(index, 1)
+    })
+
+    socket.on('changeProductPair', function (data) {
+        var index = socketConnections.indexOf(socket.id);
+        clientOptions[index].productPairSelected = data.productPair
+        updateGraphs(data.productPair, socket.id);
+    })
+
+    socket.on('requestUpdatedGraphs', function () {
+        var index = socketConnections.indexOf(socket.id);
+        updateGraphs(clientOptions[index].productPairSelected, socket.id);
     })
 })
+
 
 
 
@@ -224,6 +245,7 @@ const auth = {
     passphrase: process.env.CP_PP,
     useSandbox: false,
 };
+
 const client = new CoinbasePro(auth);
 
 var lastBTCPrice = 0;
@@ -232,7 +254,7 @@ var lastETHPrice = 0;
 const ws = new WebSocket('wss://ws-feed.pro.coinbase.com')
 
 ws.on('open', function open() {
-    ws.send('{"type": "subscribe", "product_ids": ["BTC-GBP", "ETH-GBP"], "channels": ["level2", "heartbeat", {"name": "ticker", "product_ids": ["BTC-GBP", "ETH-GBP"]}]}');
+    ws.send('{"type": "subscribe", "product_ids": ["BTC-GBP", "ETH-GBP", "BTC-USD", "ETH-USD"], "channels": ["level2", "heartbeat", {"name": "ticker", "product_ids": ["BTC-GBP", "ETH-GBP", "BTC-USD", "ETH-USD"]}]}');
 });
 
 ws.on('message', function incoming(data) {
@@ -253,13 +275,20 @@ setInterval(function () {
 }, 500);
 
 setInterval(function () {
-    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', 'BTC-GBP')
-    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', 'BTC-GBP')
-    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', 'BTC-GBP')
-    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', 'BTC-GBP')
-    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', 'BTC-GBP')
-    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', 'BTC-GBP')
+    for (i = 0; i < clientOptions.length; i++) {
+        updateGraphs(clientOptions[i].productPairSelected, clientOptions[i].socketID)
+    }
+    console.log(clientOptions)
 }, 5000);
+
+function updateGraphs(productPair, socketID) {
+    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID)
+    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID)
+    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID)
+    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID)
+    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID)
+    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID)
+}
 
 updateFills()
 
@@ -293,7 +322,7 @@ function updateFills() {
 }
 
 
-function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair) {
+function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketID) {
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
 
     if (granularity >= 86400) { granularity = 86400 }
@@ -319,7 +348,7 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair) {
                 formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
             }
 
-            io.to('clients').emit('graphData', {
+            io.to(socketID).emit('graphData', {
                 graph: graph,
                 data: formattedDataArray,
                 percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),

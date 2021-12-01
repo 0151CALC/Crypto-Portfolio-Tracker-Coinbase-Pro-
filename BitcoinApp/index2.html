@@ -82,9 +82,19 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/old">Old Version</a>
                     </li>
+                    <li class="nav-item">
+                        <span class="navbar-text font-weight-bold" id="24Percent"></span>
+                    </li>
                 </ul>
                 <ul class="navbar-nav ml-auto">
-                    <span class="navbar-text font-weight-bold" id="24Percent"></span>
+                    <li class="nav-item">
+                        <select class="form-select" onchange="productPairSelectedChanged()" id="productPairSelect">
+                            <option value="BTC-GBP" selected>BTC-GBP</option>
+                            <option value="ETH-GBP">ETH-GBP</option>
+                            <option value="BTC-USD">BTC-USD</option>
+                            <option value="ETH-USD">ETH-USD</option>
+                        </select>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -214,6 +224,13 @@
 
         <script>
 
+            function productPairSelectedChanged() {
+                socket.emit('changeProductPair', {
+                    productPair: document.getElementById("productPairSelect").value
+                })
+            }
+
+
             $('#graphModal').on('show.bs.modal', function (event) {
                 var button = $(event.relatedTarget)
                 var graph = button.data('graph')
@@ -236,6 +253,8 @@
                 document.getElementsByClassName("modalGraph")[0].appendChild(spinner)
 
                 modal.find('.modalGraph').attr("id", graph);
+
+                socket.emit('requestUpdatedGraphs');
             })
 
             $('#graphModal').on('hidden.bs.modal', function () {
@@ -315,12 +334,12 @@
                     title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest + '  |  Current: ' + data.data[data.data.length - 1][3];
                 } else if (data.graph == "graph3") {
 
-                    if (Math.sign(data.percentage)) {
+                    if (Math.sign(Number.parseFloat(data.percentage)) == 1) {
                         document.getElementById("24Percent").innerHTML = 'Up ' + data.percentage + '% in the last 24 Hours! :)';
                     } else {
                         document.getElementById("24Percent").innerHTML = 'Down ' + data.percentage + '% in the last 24 Hours :(';
                     }
-                    document.getElementById("24Percent").style.color = getNumberSignColour(data.percentage)
+                    document.getElementById("24Percent").style.color = getNumberSignColour(Number.parseFloat(data.percentage));
                     title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest
                 } else {
                     title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest
@@ -337,6 +356,12 @@
             function test() {
                 window.location.href = 'https://pro.coinbase.com/oauth/authorize?response_type=code&client_id=c6e2ce355a64784293d7f9fe43596f5328b526a28b9a4bb80128b3a91095605c&redirect_uri=http://localhost:2000/oauth/redirect&scope=wallet:buys:read,wallet:accounts:read';
             }
+
+            //function changeProductPair(productPair) {
+            //    socket.emit('changeProductPair', {
+            //        productPair: productPair
+            //    })
+            //}
 
             socket.on('data', function (data) {
 
