@@ -232,9 +232,6 @@ io.sockets.on('connection', function (socket) {
     })
 })
 
-
-
-
 let buys = new Buys()
 
 const { CoinbasePro } = require('coinbase-pro-node');
@@ -247,10 +244,7 @@ const auth = {
 };
 
 const client = new CoinbasePro(auth);
-
-var lastBTCPrice = 0;
-var lastETHPrice = 0;
-
+const prices = new Map();
 const ws = new WebSocket('wss://ws-feed.pro.coinbase.com')
 
 ws.on('open', function open() {
@@ -260,41 +254,28 @@ ws.on('open', function open() {
 ws.on('message', function incoming(data) {
     try {
         var data = JSON.parse(data)
-        if (data.product_id == "BTC-GBP") {
-            lastBTCPrice = data.changes[0][1]
-        } else if (data.product_id == "ETH-GBP") {
-            lastETHPrice = data.changes[0][1]
-        }
+        prices.set(data.product_id, data.changes[0][1]);
     } catch (err) {
         // Just ignore error, only happens when the coinbase socket doesn't return any data. 
     }
 });
 
+updateFills()
+
 setInterval(function () {
     update()
-}, 500);
+}, 500); //Update price of products every 0.5 seconds
 
 setInterval(function () {
     for (i = 0; i < clientOptions.length; i++) {
         updateGraphs(clientOptions[i].productPairSelected, clientOptions[i].socketID)
     }
     console.log(clientOptions)
-}, 5000);
-
-function updateGraphs(productPair, socketID) {
-    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID)
-    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID)
-    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID)
-    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID)
-    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID)
-    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID)
-}
-
-updateFills()
+}, 5000); //Update graphs every 5 seconds (unless requested by client)
 
 setInterval(function () {
     updateFills()
-}, 900000);
+}, 900000); //Update client filles every 15 minutes
 
 //Just some testing ignore.
 
@@ -321,6 +302,14 @@ function updateFills() {
     });
 }
 
+function updateGraphs(productPair, socketID) {
+    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID)
+    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID)
+    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID)
+    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID)
+    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID)
+    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID)
+}
 
 function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketID) {
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
@@ -361,14 +350,23 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketI
 
 function update() {
     for (i = 0; i < socketConnections.length; i++) {
+        var leftPrice = 0;
+        var rightPrice = 0;
+        if (clientOptions[i].productPairSelected == 'BTC-GBP' || clientOptions[i].productPairSelected == 'ETH-GBP') {
+            leftPrice = prices.get('BTC-GBP');
+            rightPrice = prices.get('ETH-GBP');
+        } else if (clientOptions[i].productPairSelected == 'BTC-USD' || clientOptions[i].productPairSelected == 'ETH-USD') {
+            leftPrice = prices.get('BTC-USD');
+            rightPrice = prices.get('ETH-USD');
+        }
         io.to(socketConnections[i]).emit('data', {
-            BTCPrice: lastBTCPrice,
-            ETHPrice: lastETHPrice,
+            leftPrice: leftPrice,
+            rightPrice: rightPrice,
             BTCAmount: buys.getTotalAmountOfProduct('BTC-GBP'),
             ETHAmount: buys.getTotalAmountOfProduct('ETH-GBP'),
-            netProfit: buys.getNetProfit('Both', lastBTCPrice, lastETHPrice),
+            netProfit: buys.getNetProfit('Both', prices.get('BTC-GBP'), prices.get('ETH-GBP')),
             totalInvested: buys.getAmountPaidForAllProducts(),
-            buyData: buys.getData(lastBTCPrice, lastETHPrice)
+            buyData: buys.getData(prices.get('BTC-GBP'), prices.get('ETH-GBP'))
         });
     }
 }
@@ -397,26 +395,5 @@ function getFormattedDate(date, portion) {
         } else {
             return value;
         }
-    }
-}
-
-function sortByDate(arrayOfObjects) {
-    return arrayOfObjects.sort(compare)
-    function compare(a, b) {
-
-        if (a.date == "") {
-            return 0;
-        }
-
-        const dateA = a.date;
-        const dateB = b.date;
-
-        let comparison = 0;
-        if (dateA < dateB) {
-            comparison = -1;
-        } else if (dateA > dateB) {
-            comparison = 1;
-        }
-        return comparison;
     }
 }
