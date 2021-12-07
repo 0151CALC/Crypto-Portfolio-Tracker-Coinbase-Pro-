@@ -105,7 +105,7 @@
                         <div class="container" style="height: 100%">
                             <div class="row text-center">
                                 <div class="col-4">
-                                    <h2 ID="BTCPrice">1000.00</h2>
+                                    <h2 ID="leftPrice">1000.00</h2>
                                     <h2 ID="BTCAmount">1000.00</h2>
                                 </div>
                                 <div class="col-4">
@@ -113,7 +113,7 @@
                                     <h2 id="profitLoss"></h2>
                                 </div>
                                 <div class="col-4">
-                                    <h2 ID="ETHPrice">1000.00</h2>
+                                    <h2 ID="rightPrice">1000.00</h2>
                                     <h2 ID="ETHAmount">1000.00</h2>
                                 </div>
                             </div>
@@ -323,8 +323,8 @@
             }
 
             var socket = io();
-            var BTCPrice = 0;
-            var ETHPrice = 0;
+            var leftPrice = 0;
+            var rightPrice = 0;
             var buyData = [];
 
             socket.on('graphData', function (data) {
@@ -365,24 +365,24 @@
 
             socket.on('data', function (data) {
 
-                document.getElementById("BTCPrice").style.color = getColour(BTCPrice, data.BTCPrice)
-                document.getElementById("ETHPrice").style.color = getColour(ETHPrice, data.ETHPrice)
+                document.getElementById("leftPrice").style.color = getColour(leftPrice, data.leftPrice)
+                document.getElementById("rightPrice").style.color = getColour(rightPrice, data.rightPrice)
 
-                BTCPrice = data.BTCPrice;
-                ETHPrice = data.ETHPrice;
+                leftPrice = data.leftPrice;
+                rightPrice = data.rightPrice;
 
                 BTCAmount = data.BTCAmount;
                 ETHAmount = data.ETHAmount;
 
-                document.title = "BTC: " + BTCPrice + " | ETH: " + ETHPrice;
+                document.title = "BTC: " + leftPrice + " | ETH: " + rightPrice;
 
-                document.getElementById("BTCPrice").innerHTML = BTCPrice
-                document.getElementById("BTCAmount").innerHTML = (BTCPrice * data.BTCAmount).toFixed(2)
+                document.getElementById("leftPrice").innerHTML = leftPrice
+                document.getElementById("BTCAmount").innerHTML = (leftPrice * data.BTCAmount).toFixed(2)
 
-                document.getElementById("ETHPrice").innerHTML = ETHPrice
-                document.getElementById("ETHAmount").innerHTML = (ETHPrice * data.ETHAmount).toFixed(2)
+                document.getElementById("rightPrice").innerHTML = rightPrice
+                document.getElementById("ETHAmount").innerHTML = (rightPrice * data.ETHAmount).toFixed(2)
 
-                document.getElementById("total").innerHTML = ((BTCPrice * data.BTCAmount) + ETHPrice * data.ETHAmount).toFixed(2)
+                document.getElementById("total").innerHTML = ((leftPrice * data.BTCAmount) + rightPrice * data.ETHAmount).toFixed(2)
                 document.getElementById("total").style.color = getColour(0, data.netProfit)
 
                 document.getElementById("profitLoss").innerHTML = data.netProfit
