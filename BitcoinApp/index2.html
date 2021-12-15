@@ -63,6 +63,14 @@
                     max-width: 2400px;
                 }
             }
+            @media (max-width: 1400px) {
+                td {
+                    text-align: center;
+                }
+                #buyIcon, #sellIcon {
+                    float: none;
+                }
+            }
         </style>
     </head>
     <body>
@@ -436,7 +444,7 @@
                                 cell.innerHTML += '%'
                             }
                             if (j == 0) {
-
+                                cell.innerHTML += '  '
                                 if (tableData[i][5] == 'buy') {
                                     var buyIcon = document.getElementById("buyIcon")
                                     var buyIcon = buyIcon.cloneNode(true);
@@ -449,6 +457,8 @@
                                     cell.appendChild(sellIcon)
                                 }
                             }
+                            cell.className = "align-middle";
+
                             row.appendChild(cell)
                         }
                         tableBody.appendChild(row)

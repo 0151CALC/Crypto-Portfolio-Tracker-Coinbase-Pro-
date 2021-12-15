@@ -320,7 +320,6 @@ function updateFills() {
         for (i = 0; i < fill.data.length; i++) {
             fills.newFill(fill.data[i].product_id, fill.data[i].price, ((fill.data[i].size * fill.data[i].price) + Number.parseFloat(fill.data[i].fee)), fill.data[i].size, new Date(fill.data[i].created_at), fill.data[i].fee, fill.data[i].side)
         }
-        console.log(fills.fills)
     });
     client.rest.fill.getFillsByProductId('ETH-GBP').then(fill => {
         for (i = 0; i < fill.data.length; i++) {
