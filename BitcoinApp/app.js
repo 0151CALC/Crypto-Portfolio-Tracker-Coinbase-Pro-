@@ -6,51 +6,59 @@ const request = require('request');
 const WebSocket = require('ws')
 const axios = require("axios");
 
-class Buys {
+class Fills {
     constructor() {
-        this.buys = []
+        this.fills = []
     }
-    newBuy(product, price, GBPamount, amount, date, feeInGBP) {
-        let b = new Buy(product, price, GBPamount, amount, date, feeInGBP)
-        this.buys.push(b);
-        return b
+    newFill(product, price, GBPamount, amount, date, feeInGBP, side) {
+        let f = new Fill(product, price, GBPamount, amount, date, feeInGBP, side)
+        this.fills.push(f);
+        return f
     }
     getAmountPaidForAllProducts() {
         var paid = 0.0;
-        for (var i = 0; i < this.buys.length; i++) {
-            var buy = this.buys[i];
-            paid += Number.parseFloat(buy.amount * buy.price);
+        for (var i = 0; i < this.fills.length; i++) {
+            var fill = this.fills[i];
+            if (fill.side == 'buy') {
+                paid += Number.parseFloat(fill.amount * fill.price);
+            } else if (fill.side == 'sell') {
+                paid -= Number.parseFloat(fill.amount * fill.price);
+            }
         }
         return Number.parseFloat(paid).toFixed(2);
     }
     getTotalAmountOfProduct(product) {
         var amount = 0.0;
-        for (var i = 0; i < this.buys.length; i++) {
-            var buy = this.buys[i];
-            if (buy.product == product) {
-                amount += Number.parseFloat(buy.amount);
+        for (var i = 0; i < this.fills.length; i++) {
+            var fill = this.fills[i];
+            if (fill.product == product && fill.side == 'buy') {
+                amount += Number.parseFloat(fill.amount);
+            } else if (fill.product == product && fill.side == 'sell') {
+                amount -= Number.parseFloat(fill.amount);
             }
         }
         return amount.toFixed(8)
     }
     getAveragePriceOfProduct(product) {
         var totalPrice = 0.0;
-        var amountOfBuys = 0;
-        for (var i = 0; i < this.buys.length; i++) {
-            var buy = this.buys[i];
-            if (buy.product == product) {
-                totalPrice += Number.parseFloat(buy.price);
-                amountOfBuys += 1;
+        var amountOfFills = 0;
+        for (var i = 0; i < this.fills.length; i++) {
+            var fill = this.fills[i];
+            if (fill.product == product && fill.side == 'buy') {
+                totalPrice += Number.parseFloat(fill.price);
+                amountOfFills += 1;
             }
         }
-        return Number.parseFloat(totalPrice / amountOfBuys).toFixed(0);
+        return Number.parseFloat(totalPrice / amountOfFills).toFixed(0);
     }
     getTotalAmountPaidForProduct(product) {
         var paid = 0.0;
-        for (var i = 0; i < this.buys.length; i++) {
-            var buy = this.buys[i];
-            if (buy.product == product) {
-                paid += Number.parseFloat(buy.amount * buy.price);
+        for (var i = 0; i < this.fills.length; i++) {
+            var fill = this.fills[i];
+            if (fill.product == product && fill.side == 'buy') {
+                paid += Number.parseFloat(fill.amount * fill.price);
+            } else if (fill.product == product && fill.side == 'sell') {
+                paid -= Number.parseFloat(fill.amount * fill.price);
             }
         }
         return Number.parseFloat(paid).toFixed(2);
@@ -58,17 +66,22 @@ class Buys {
     getInitAndNew(product, BTCPrice, ETHPrice) {
         var initPrice = 0.0;
         var newPrice = 0.0;
-        for (var i = 0; i < this.buys.length; i++) {
-            var buy = this.buys[i];
-            if (product == buy.product || product == "Both") {
+        for (var i = 0; i < this.fills.length; i++) {
+            var fill = this.fills[i];
+            if (product == fill.product || product == "Both") {
                 var price;
-                if (buy.product == "BTC-GBP") {
+                if (fill.product == "BTC-GBP") {
                     price = BTCPrice
-                } else if (buy.product == "ETH-GBP") {
+                } else if (fill.product == "ETH-GBP") {
                     price = ETHPrice
                 }
-                initPrice += (buy.amount * buy.price)
-                newPrice += (buy.amount * price)
+                if (fill.side == 'buy') {
+                    initPrice += (fill.amount * fill.price)
+                    newPrice += (fill.amount * price)
+                } else if (fill.side == 'sell') {
+                    initPrice -= (fill.amount * fill.price)
+                    newPrice -= (fill.amount * price)
+                }
             }
         }
         var data = {
@@ -87,10 +100,10 @@ class Buys {
     }
     getData(BTCPrice, ETHPrice) {
         var data = []
-        for (var i = 0; i < this.buys.length; i++) {
-            var buy = this.buys[i]
-            if (buy.GBPamount > 5.00) {
-                var buyData = [buy.product, buy.date, `${buy.amount} @ ${Number.parseFloat(buy.price).toFixed(0)} For ${Number.parseFloat(buy.GBPamount - buy.feeInGBP).toFixed(2)}`, buy.calcPercentageDiff(BTCPrice, ETHPrice), buy.calcProfit(BTCPrice, ETHPrice)]
+        for (var i = 0; i < this.fills.length; i++) {
+            var fill = this.fills[i]
+            if (fill.GBPamount > 5.00) {
+                var buyData = [fill.product, fill.date, `${fill.amount} @ ${Number.parseFloat(fill.price).toFixed(0)} For ${Number.parseFloat(fill.GBPamount - fill.feeInGBP).toFixed(2)}`, fill.calcPercentageDiff(BTCPrice, ETHPrice), fill.calcProfit(BTCPrice, ETHPrice), fill.side]
                 data.push(buyData);
             }
         }
@@ -101,33 +114,46 @@ class Buys {
     }
 }
 
-class Buy {
-    constructor(product, price, GBPamount, amount, date, feeInGBP) {
+class Fill {
+    constructor(product, price, GBPamount, amount, date, feeInGBP, side) {
         this.product = product;
         this.price = price;
         this.GBPamount = GBPamount;
         this.amount = amount;
         this.date = date;
         this.feeInGBP = feeInGBP;
+        this.side = side;
     }
     calcProfit(BTCPrice, ETHPrice) {
-        var price
+        var profit = 0.00;
+        var price;
         if (this.product == "BTC-GBP") {
             price = BTCPrice
         } else if (this.product == "ETH-GBP") {
             price = ETHPrice
         }
-        return Number.parseFloat((this.amount * price) - (this.amount * this.price)).toFixed(2)
+        if (this.side == 'buy') {
+            profit = Number.parseFloat((this.amount * price) - (this.amount * this.price)).toFixed(2)
+        } else if (this.side == 'sell') {
+            profit = Number.parseFloat((this.amount * price) - (this.amount * this.price)).toFixed(2) - (Number.parseFloat((this.amount * price) - (this.amount * this.price)).toFixed(2) * 2)
+        }
+        return profit;
     }
     calcPercentageDiff(BTCPrice, ETHPrice) {
         var initPrice = (this.amount * this.price)
         var newPrice;
+        var percentage = 0.00;
         if (this.product == "BTC-GBP") {
             newPrice = this.amount * BTCPrice
         } else if (this.product == "ETH-GBP") {
             newPrice = this.amount * ETHPrice
         }
-        return Number.parseFloat(((newPrice - initPrice) / initPrice) * 100).toFixed(2)
+        if (this.side == 'buy') {
+            percentage = Number.parseFloat(((newPrice - initPrice) / initPrice) * 100).toFixed(2)
+        } else if (this.side == 'sell') {
+            percentage = Number.parseFloat(((newPrice - initPrice) / initPrice) * 100).toFixed(2) - (Number.parseFloat(((newPrice - initPrice) / initPrice) * 100).toFixed(2) * 2)
+        }
+        return percentage;
     }
 }
 
@@ -232,7 +258,7 @@ io.sockets.on('connection', function (socket) {
     })
 })
 
-let buys = new Buys()
+let fills = new Fills()
 
 const { CoinbasePro } = require('coinbase-pro-node');
 
@@ -289,15 +315,16 @@ setInterval(function () {
 //});
 
 function updateFills() {
-    buys.buys = []
-    client.rest.fill.getFillsByProductId('BTC-GBP').then(buy => {
-        for (i = 0; i < buy.data.length; i++) {
-            buys.newBuy(buy.data[i].product_id, buy.data[i].price, ((buy.data[i].size * buy.data[i].price) + Number.parseFloat(buy.data[i].fee)), buy.data[i].size, new Date(buy.data[i].created_at), buy.data[i].fee)
+    fills.fills = []
+    client.rest.fill.getFillsByProductId('BTC-GBP').then(fill => {
+        for (i = 0; i < fill.data.length; i++) {
+            fills.newFill(fill.data[i].product_id, fill.data[i].price, ((fill.data[i].size * fill.data[i].price) + Number.parseFloat(fill.data[i].fee)), fill.data[i].size, new Date(fill.data[i].created_at), fill.data[i].fee, fill.data[i].side)
         }
+        console.log(fills.fills)
     });
-    client.rest.fill.getFillsByProductId('ETH-GBP').then(buy => {
-        for (i = 0; i < buy.data.length; i++) {
-            buys.newBuy(buy.data[i].product_id, buy.data[i].price, ((buy.data[i].size * buy.data[i].price) + Number.parseFloat(buy.data[i].fee)), buy.data[i].size, new Date(buy.data[i].created_at), buy.data[i].fee)
+    client.rest.fill.getFillsByProductId('ETH-GBP').then(fill => {
+        for (i = 0; i < fill.data.length; i++) {
+            fills.newFill(fill.data[i].product_id, fill.data[i].price, ((fill.data[i].size * fill.data[i].price) + Number.parseFloat(fill.data[i].fee)), fill.data[i].size, new Date(fill.data[i].created_at), fill.data[i].fee, fill.data[i].side)
         }
     });
 }
@@ -362,11 +389,11 @@ function update() {
         io.to(socketConnections[i]).emit('data', {
             leftPrice: leftPrice,
             rightPrice: rightPrice,
-            BTCAmount: buys.getTotalAmountOfProduct('BTC-GBP'),
-            ETHAmount: buys.getTotalAmountOfProduct('ETH-GBP'),
-            netProfit: buys.getNetProfit('Both', prices.get('BTC-GBP'), prices.get('ETH-GBP')),
-            totalInvested: buys.getAmountPaidForAllProducts(),
-            buyData: buys.getData(prices.get('BTC-GBP'), prices.get('ETH-GBP'))
+            BTCAmount: fills.getTotalAmountOfProduct('BTC-GBP'),
+            ETHAmount: fills.getTotalAmountOfProduct('ETH-GBP'),
+            netProfit: fills.getNetProfit('Both', prices.get('BTC-GBP'), prices.get('ETH-GBP')),
+            totalInvested: fills.getAmountPaidForAllProducts(),
+            buyData: fills.getData(prices.get('BTC-GBP'), prices.get('ETH-GBP'))
         });
     }
 }
