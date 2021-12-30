@@ -428,8 +428,9 @@
                     tableData.pop()
                 }
 
-                if (document.getElementsByTagName("tbody").length == 0) {
+                if (document.getElementsByClassName("mainTableBody").length == 0) {
                     var tableBody = document.createElement('tbody')
+                    tableBody.className = "mainTableBody"
                     for (i = 0; i < tableData.length; i++) {
                         var row = document.createElement('tr');
                         row.classList.add('tableRows');
