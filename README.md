@@ -13,5 +13,7 @@ You then need to put the API key infomation into the 'auth' object in the app.js
 If you are going to be running this in heroku then you are going to want to leave the auth object how it is and instead 
 setup the API information in the heroku config environment variables.
 
+![alt text](https://i.imgur.com/aOSIInU.png)
+
 
 
