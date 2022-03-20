@@ -118,10 +118,20 @@
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item">
                         <select class="form-select" onchange="productPairSelectedChanged()" id="productPairSelect">
-                            <option value="BTC-GBP" selected>BTC-GBP</option>
-                            <option value="ETH-GBP">ETH-GBP</option>
-                            <option value="BTC-USD">BTC-USD</option>
-                            <option value="ETH-USD">ETH-USD</option>
+
+                            <optgroup label="Product Prices">
+                                <option value="BTC-GBP" selected>BTC-GBP</option>
+                                <option value="ETH-GBP">ETH-GBP</option>
+                                <option value="BTC-USD">BTC-USD</option>
+                                <option value="ETH-USD">ETH-USD</option>
+                            </optgroup>
+
+                            <optgroup label="Portfolio Prices">
+                                <option value="ALL">Total Portfolio</option>
+                                <option value="BTC-GBP">BTC Portfolio</option>
+                                <option value="ETH-GBP">ETH Portfolio</option>
+                            </optgroup>
+                            
                         </select>
                     </li>
                 </ul>
@@ -254,8 +264,14 @@
         <script>
 
             function productPairSelectedChanged() {
+                var portfolio = false;
+                if (document.querySelector('#productPairSelect option:checked').parentElement.label == 'Portfolio Prices') {
+                    portfolio = true
+                }
+
                 socket.emit('changeProductPair', {
-                    productPair: document.getElementById("productPairSelect").value
+                    productPair: document.getElementById("productPairSelect").value,
+                    portfolio: portfolio
                 })
             }
 
@@ -283,7 +299,16 @@
 
                 modal.find('.modalGraph').attr("id", graph);
 
-                socket.emit('requestUpdatedGraphs');
+                var portfolio = false;
+                if (document.querySelector('#productPairSelect option:checked').parentElement.label == 'Portfolio Prices') {
+                    portfolio = true
+                }
+
+                console.log(portfolio)
+
+                socket.emit('requestUpdatedGraphs', {
+                    portfolio: portfolio
+                });
             })
 
             $('#graphModal').on('hidden.bs.modal', function () {
@@ -376,7 +401,7 @@
                 graphData[data.graph] = data.data
                 var title = ""
                 if (data.graph == "graph1") {
-                    title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest + '  |  Current: ' + data.data[data.data.length - 1][3];
+                    title = data.percentage + '%   | ' + getGraphDuration(data.graph) + '  |  Low: ' + data.lowest + '  |  High: ' + data.highest + '  |  Current: ' + Number.parseFloat(data.data[data.data.length - 1][3]).toFixed(2);
                 } else if (data.graph == "graph3") {
 
                     if (Math.sign(Number.parseFloat(data.percentage)) == 1) {

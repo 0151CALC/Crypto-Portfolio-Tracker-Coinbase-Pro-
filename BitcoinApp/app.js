@@ -15,6 +15,26 @@ class Fills {
         this.fills.push(f);
         return f
     }
+
+    getFillsForProductBeforeDate(product, beforeDateUNIX) {
+
+        var amount = 0.0
+
+        for (var i = 0; i < this.fills.length; i++) {
+            if (product == this.fills[i].product) {
+                var fillDateUNIX = Math.round((this.fills[i].date).getTime() / 1000);
+                if (fillDateUNIX < beforeDateUNIX) {
+                    if (this.fills[i].side == 'buy') {
+                        amount += Number.parseFloat(this.fills[i].amount);
+                    } else if (this.fills[i].side == 'sell') {
+                        amount -= Number.parseFloat(this.fills[i].amount);
+                    }
+                }
+            } 
+        }
+        return amount
+    }
+
     getAmountPaidForAllProducts() {
         var paid = 0.0;
         for (var i = 0; i < this.fills.length; i++) {
@@ -235,10 +255,11 @@ io.sockets.on('connection', function (socket) {
 
     clientOptions.push({
         socketID: socket.id,
-        productPairSelected: 'BTC-GBP'
+        productPairSelected: 'BTC-GBP',
+        portfolio: false
     })
 
-    updateGraphs('BTC-GBP', socket.id);
+    updateGraphs('BTC-GBP', socket.id, false);
 
     socket.on('disconnect', function () {
         var index = socketConnections.indexOf(socket.id);
@@ -249,12 +270,13 @@ io.sockets.on('connection', function (socket) {
     socket.on('changeProductPair', function (data) {
         var index = socketConnections.indexOf(socket.id);
         clientOptions[index].productPairSelected = data.productPair
-        updateGraphs(data.productPair, socket.id);
+        clientOptions[index].portfolio = data.portfolio
+        updateGraphs(data.productPair, socket.id, data.portfolio);
     })
 
-    socket.on('requestUpdatedGraphs', function () {
+    socket.on('requestUpdatedGraphs', function (data) {
         var index = socketConnections.indexOf(socket.id);
-        updateGraphs(clientOptions[index].productPairSelected, socket.id);
+        updateGraphs(clientOptions[index].productPairSelected, socket.id, data.portfolio);
     })
 })
 
@@ -294,7 +316,7 @@ setInterval(function () {
 
 setInterval(function () {
     for (i = 0; i < clientOptions.length; i++) {
-        updateGraphs(clientOptions[i].productPairSelected, clientOptions[i].socketID)
+        updateGraphs(clientOptions[i].productPairSelected, clientOptions[i].socketID, clientOptions[i].portfolio)
     }
     console.log(clientOptions)
 }, 5000); //Update graphs every 5 seconds (unless requested by client)
@@ -328,17 +350,19 @@ function updateFills() {
     });
 }
 
-function updateGraphs(productPair, socketID) {
-    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID)
-    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID)
-    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID)
-    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID)
-    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID)
-    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID)
+function updateGraphs(productPair, socketID, portfolio) {
+    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID, portfolio)
+    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID, portfolio)
+    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID, portfolio)
+    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID, portfolio)
+    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID, portfolio)
+    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID, portfolio)
 }
 
-function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketID) {
+function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketID, portfolio) {
+
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
+    var totalPortfolio = false
 
     if (granularity >= 86400) { granularity = 86400 }
     else if (granularity >= 21600) { granularity = 21600 }
@@ -347,29 +371,109 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketI
     else if (granularity >= 300) { granularity = 300 }
     else if (granularity >= 60) { granularity = 60 }
 
+    if (productPair == 'ALL') {
+        productPair = 'BTC-GBP'
+        totalPortfolio = true
+    }
+
     var URL = `https://api.pro.coinbase.com/products/${productPair}/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
     request({ url: URL, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body) => {
         if (!error && response.statusCode == 200) {
 
-            var formattedDataArray = []
-            var highest = 0.0;
-            var lowest = body[0][1];
+            if (totalPortfolio) {
 
-            for (var i = 0; i < body.length; i++) {
-                var unixTime = body[i][0]
-                var date = new Date(unixTime * 1000);
-                if (Number.parseFloat(body[i][2]) > highest) { highest = Number.parseFloat(body[i][2]) }
-                if (Number.parseFloat(body[i][1]) < lowest) { lowest = Number.parseFloat(body[i][1]) }
-                formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
+                var URL2 = `https://api.pro.coinbase.com/products/ETH-GBP/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
+
+                request({ url: URL2, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body2) => {
+
+                    var formattedDataArray = []
+                    var highest = 0.0;
+                    var lowest = 0.0
+
+                    lowest = ((body[0][1] * fills.getTotalAmountOfProduct('BTC-GBP')) + (body2[0][1] * fills.getTotalAmountOfProduct('ETH-GBP')))
+
+                    try {
+                        for (var i = 0; i < body.length; i++) {
+
+                            if (!(i >= body2.length)) {
+                                var unixTime = body[i][0]
+
+                                var BTCamount = fills.getFillsForProductBeforeDate('BTC-GBP', unixTime)
+                                var ETHamount = fills.getFillsForProductBeforeDate('ETH-GBP', unixTime)
+
+                                if ((Number.parseFloat(body[i][2] * BTCamount)) + ((Number.parseFloat(body2[i][2] * ETHamount))) > highest) {
+                                    highest = (Number.parseFloat(body[i][2] * BTCamount)) + ((Number.parseFloat(body2[i][2] * ETHamount)))
+                                }
+
+                                if ((Number.parseFloat(body[i][2] * BTCamount)) + ((Number.parseFloat(body2[i][2] * ETHamount))) < lowest) {
+                                    lowest = (Number.parseFloat(body[i][2] * BTCamount)) + ((Number.parseFloat(body2[i][2] * ETHamount)))
+                                }
+
+                                formattedDataArray.unshift([
+                                    getFormattedDate(new Date(unixTime * 1000), dateFormat),
+                                    (body[i][1] * BTCamount) + (body2[i][1] * ETHamount),
+                                    (body[i][3] * BTCamount) + (body2[i][3] * ETHamount),
+                                    (body[i][4] * BTCamount) + (body2[i][4] * ETHamount),
+                                    (body[i][2] * BTCamount) + (body2[i][2] * ETHamount)
+                                ])
+                            }
+                        }
+                    } catch (e) {
+                        console.log(e)
+                    }
+
+                    io.to(socketID).emit('graphData', {
+                        graph: graph,
+                        data: formattedDataArray,
+                        percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
+                        highest: highest.toFixed(2),
+                        lowest: lowest.toFixed(2)
+                    })
+                })
+            } else {
+                var formattedDataArray = []
+                var highest = 0.0;
+                var lowest = 0.0
+
+                if (portfolio) {
+                    lowest = body[0][1] * fills.getTotalAmountOfProduct(productPair);
+                } else {
+                    lowest = body[0][1];
+                }
+
+                for (var i = 0; i < body.length; i++) {
+                    var unixTime = body[i][0]
+
+                    var date = new Date(unixTime * 1000);
+                    if (portfolio) {
+                        if (Number.parseFloat(body[i][2] * fills.getTotalAmountOfProduct(productPair)) > highest) { highest = Number.parseFloat(body[i][2] * fills.getTotalAmountOfProduct(productPair)) }
+                        if (Number.parseFloat(body[i][1] * fills.getTotalAmountOfProduct(productPair)) < lowest) { lowest = Number.parseFloat(body[i][1] * fills.getTotalAmountOfProduct(productPair)) }
+
+                        var amount = fills.getFillsForProductBeforeDate(productPair, unixTime)
+
+                        formattedDataArray.unshift([
+                            getFormattedDate(date, dateFormat),
+                            body[i][1] * amount,
+                            body[i][3] * amount,
+                            body[i][4] * amount,
+                            body[i][2] * amount
+                        ])
+
+                    } else {
+                        if (Number.parseFloat(body[i][2]) > highest) { highest = Number.parseFloat(body[i][2]) }
+                        if (Number.parseFloat(body[i][1]) < lowest) { lowest = Number.parseFloat(body[i][1]) }
+                        formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
+                    }
+                }
+
+                io.to(socketID).emit('graphData', {
+                    graph: graph,
+                    data: formattedDataArray,
+                    percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
+                    highest: highest.toFixed(2),
+                    lowest: lowest.toFixed(2)
+                })
             }
-
-            io.to(socketID).emit('graphData', {
-                graph: graph,
-                data: formattedDataArray,
-                percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
-                highest: highest,
-                lowest: lowest
-            })
         }
     });
 }
@@ -378,7 +482,7 @@ function update() {
     for (i = 0; i < socketConnections.length; i++) {
         var leftPrice = 0;
         var rightPrice = 0;
-        if (clientOptions[i].productPairSelected == 'BTC-GBP' || clientOptions[i].productPairSelected == 'ETH-GBP') {
+        if (clientOptions[i].productPairSelected == 'BTC-GBP' || clientOptions[i].productPairSelected == 'ETH-GBP' || clientOptions[i].productPairSelected == 'ALL') {
             leftPrice = prices.get('BTC-GBP');
             rightPrice = prices.get('ETH-GBP');
         } else if (clientOptions[i].productPairSelected == 'BTC-USD' || clientOptions[i].productPairSelected == 'ETH-USD') {
