@@ -16,10 +16,8 @@ class Fills {
         return f
     }
 
-    getFillsForProductBeforeDate(product, beforeDateUNIX) {
-
+    getAmountForProductBeforeDate(product, beforeDateUNIX) {
         var amount = 0.0
-
         for (var i = 0; i < this.fills.length; i++) {
             if (product == this.fills[i].product) {
                 var fillDateUNIX = Math.round((this.fills[i].date).getTime() / 1000);
@@ -276,7 +274,7 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('requestUpdatedGraphs', function (data) {
         var index = socketConnections.indexOf(socket.id);
-        updateGraphs(clientOptions[index].productPairSelected, socket.id, data.portfolio);
+        updateGraphs(clientOptions[index].productPairSelected, socket.id, data.portfolio, data.reloadGraph);
     })
 })
 
@@ -350,16 +348,16 @@ function updateFills() {
     });
 }
 
-function updateGraphs(productPair, socketID, portfolio) {
-    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID, portfolio)
-    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID, portfolio)
-    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID, portfolio)
-    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID, portfolio)
-    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID, portfolio)
-    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID, portfolio)
+function updateGraphs(productPair, socketID, portfolio, reloadGraphs) {
+    sendGraphData(getDate(0, 0, 1), getDate(0, 0, 0), 'graph1', 'HMS', productPair, socketID, portfolio, reloadGraphs)
+    sendGraphData(getDate(0, 0, 3), getDate(0, 0, 0), 'graph2', 'HMS', productPair, socketID, portfolio, reloadGraphs)
+    sendGraphData(getDate(0, 1, 0), getDate(0, 0, 0), 'graph3', 'HMS', productPair, socketID, portfolio, reloadGraphs)
+    sendGraphData(getDate(0, 7, 0), getDate(0, 0, 0), 'graph4', 'YMD', productPair, socketID, portfolio, reloadGraphs)
+    sendGraphData(getDate(1, 0, 0), getDate(0, 0, 0), 'graph5', 'YMD', productPair, socketID, portfolio, reloadGraphs)
+    sendGraphData(getDate(6, 0, 0), getDate(0, 0, 0), 'graph6', 'YMD', productPair, socketID, portfolio, reloadGraphs)
 }
 
-function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketID, portfolio) {
+function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketID, portfolio, reloadGraph) {
 
     var granularity = Math.floor(((Math.abs(fromDate - ToDate)) / 1000 / 60));
     var totalPortfolio = false
@@ -376,30 +374,30 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketI
         totalPortfolio = true
     }
 
-    var URL = `https://api.pro.coinbase.com/products/${productPair}/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
-    request({ url: URL, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body) => {
-        if (!error && response.statusCode == 200) {
+    try {
+        var URL = `https://api.pro.coinbase.com/products/${productPair}/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
+        request({ url: URL, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body) => {
+            if (!error && response.statusCode == 200) {
 
-            if (totalPortfolio) {
+                if (totalPortfolio) {
 
-                var URL2 = `https://api.pro.coinbase.com/products/ETH-GBP/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
+                    var URL2 = `https://api.pro.coinbase.com/products/ETH-GBP/candles?start=${getFormattedDate(fromDate, 'Full')}&end=${getFormattedDate(ToDate, 'Full')}&granularity=${granularity}`
 
-                request({ url: URL2, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body2) => {
+                    request({ url: URL2, headers: { 'User-Agent': 'request' }, json: true }, (error, response, body2) => {
 
-                    var formattedDataArray = []
-                    var highest = 0.0;
-                    var lowest = 0.0
+                        var formattedDataArray = []
+                        var highest = 0.0;
+                        var lowest = 0.0
+                        lowest = ((body[0][1] * fills.getTotalAmountOfProduct('BTC-GBP')) + (body2[0][1] * fills.getTotalAmountOfProduct('ETH-GBP')))
+                        
 
-                    lowest = ((body[0][1] * fills.getTotalAmountOfProduct('BTC-GBP')) + (body2[0][1] * fills.getTotalAmountOfProduct('ETH-GBP')))
-
-                    try {
                         for (var i = 0; i < body.length; i++) {
 
                             if (!(i >= body2.length)) {
                                 var unixTime = body[i][0]
 
-                                var BTCamount = fills.getFillsForProductBeforeDate('BTC-GBP', unixTime)
-                                var ETHamount = fills.getFillsForProductBeforeDate('ETH-GBP', unixTime)
+                                var BTCamount = fills.getAmountForProductBeforeDate('BTC-GBP', unixTime)
+                                var ETHamount = fills.getAmountForProductBeforeDate('ETH-GBP', unixTime)
 
                                 if ((Number.parseFloat(body[i][2] * BTCamount)) + ((Number.parseFloat(body2[i][2] * ETHamount))) > highest) {
                                     highest = (Number.parseFloat(body[i][2] * BTCamount)) + ((Number.parseFloat(body2[i][2] * ETHamount)))
@@ -418,8 +416,50 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketI
                                 ])
                             }
                         }
-                    } catch (e) {
-                        console.log(e)
+
+                        io.to(socketID).emit('graphData', {
+                            graph: graph,
+                            data: formattedDataArray,
+                            percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
+                            highest: highest.toFixed(2),
+                            lowest: lowest.toFixed(2),
+                            reloadGraph: reloadGraph
+                        })
+                    })
+                } else {
+                    var formattedDataArray = []
+                    var highest = 0.0;
+                    var lowest = 0.0
+
+                    if (portfolio) {
+                        lowest = body[0][1] * fills.getTotalAmountOfProduct(productPair);
+                    } else {
+                        lowest = body[0][1];
+                    }
+
+                    for (var i = 0; i < body.length; i++) {
+                        var unixTime = body[i][0]
+
+                        var date = new Date(unixTime * 1000);
+                        if (portfolio) {
+                            if (Number.parseFloat(body[i][2] * fills.getTotalAmountOfProduct(productPair)) > highest) { highest = Number.parseFloat(body[i][2] * fills.getTotalAmountOfProduct(productPair)) }
+                            if (Number.parseFloat(body[i][1] * fills.getTotalAmountOfProduct(productPair)) < lowest) { lowest = Number.parseFloat(body[i][1] * fills.getTotalAmountOfProduct(productPair)) }
+
+                            var amount = fills.getAmountForProductBeforeDate(productPair, unixTime)
+
+                            formattedDataArray.unshift([
+                                getFormattedDate(date, dateFormat),
+                                body[i][1] * amount,
+                                body[i][3] * amount,
+                                body[i][4] * amount,
+                                body[i][2] * amount
+                            ])
+
+                        } else {
+                            if (Number.parseFloat(body[i][2]) > highest) { highest = Number.parseFloat(body[i][2]) }
+                            if (Number.parseFloat(body[i][1]) < lowest) { lowest = Number.parseFloat(body[i][1]) }
+                            formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
+                        }
                     }
 
                     io.to(socketID).emit('graphData', {
@@ -427,55 +467,15 @@ function sendGraphData(fromDate, ToDate, graph, dateFormat, productPair, socketI
                         data: formattedDataArray,
                         percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
                         highest: highest.toFixed(2),
-                        lowest: lowest.toFixed(2)
+                        lowest: lowest.toFixed(2),
+                        reloadGraph: reloadGraph
                     })
-                })
-            } else {
-                var formattedDataArray = []
-                var highest = 0.0;
-                var lowest = 0.0
-
-                if (portfolio) {
-                    lowest = body[0][1] * fills.getTotalAmountOfProduct(productPair);
-                } else {
-                    lowest = body[0][1];
                 }
-
-                for (var i = 0; i < body.length; i++) {
-                    var unixTime = body[i][0]
-
-                    var date = new Date(unixTime * 1000);
-                    if (portfolio) {
-                        if (Number.parseFloat(body[i][2] * fills.getTotalAmountOfProduct(productPair)) > highest) { highest = Number.parseFloat(body[i][2] * fills.getTotalAmountOfProduct(productPair)) }
-                        if (Number.parseFloat(body[i][1] * fills.getTotalAmountOfProduct(productPair)) < lowest) { lowest = Number.parseFloat(body[i][1] * fills.getTotalAmountOfProduct(productPair)) }
-
-                        var amount = fills.getFillsForProductBeforeDate(productPair, unixTime)
-
-                        formattedDataArray.unshift([
-                            getFormattedDate(date, dateFormat),
-                            body[i][1] * amount,
-                            body[i][3] * amount,
-                            body[i][4] * amount,
-                            body[i][2] * amount
-                        ])
-
-                    } else {
-                        if (Number.parseFloat(body[i][2]) > highest) { highest = Number.parseFloat(body[i][2]) }
-                        if (Number.parseFloat(body[i][1]) < lowest) { lowest = Number.parseFloat(body[i][1]) }
-                        formattedDataArray.unshift([getFormattedDate(date, dateFormat), body[i][1], body[i][3], body[i][4], body[i][2]])
-                    }
-                }
-
-                io.to(socketID).emit('graphData', {
-                    graph: graph,
-                    data: formattedDataArray,
-                    percentage: calcPercentageDiff(formattedDataArray[0][1], formattedDataArray[formattedDataArray.length - 1][4]),
-                    highest: highest.toFixed(2),
-                    lowest: lowest.toFixed(2)
-                })
             }
-        }
-    });
+        });
+    } catch (e) {
+        console.log(e)
+    }
 }
 
 function update() {
